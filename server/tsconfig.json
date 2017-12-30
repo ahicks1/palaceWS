@@ -1,0 +1,14 @@
+{
+   "include": [
+     "../AvalonCore/**/*",
+     "**/*"
+   ],
+   "compileOnSave": true,
+   "compilerOptions": {
+     "module":"CommonJS",
+     "outDir":"./out",
+      "noImplicitAny" : true,
+      "lib": ["es5", "es6", "dom"]
+   }
+
+}

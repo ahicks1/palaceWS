@@ -1,0 +1,14 @@
+{
+   "include": [
+     "../AvalonCore/**/*",
+     "**/*"
+   ],
+   "compileOnSave": true,
+   "compilerOptions": {
+       "target":"ES3",
+       "module":"system",
+       "outFile":"./scripts/main.js",
+       "noImplicitAny" : true,
+       "checkJs": true
+   }
+}

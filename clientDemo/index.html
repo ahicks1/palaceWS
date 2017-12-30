@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+  <html>
+    <head>
+      <!--Import Google Icon Font-->
+      <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+      <!--Import materialize.css-->
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-alpha.1/css/materialize.min.css">
+
+
+      <!--Let browser know website is optimized for mobile-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    </head>
+
+    <body>
+
+      <div class="container">
+        <!--CONNECTION INFO-->
+        <div class="row">
+          <form class="col s12">
+            <div class="row">
+              <div class="input-field col s12 m5">
+                <input id="username_field" type="text" class="validate">
+                <label for="username_field">Username</label>
+              </div>
+              <div class="input-field col s12 m5">
+                <input id="room_field" type="text" class="validate">
+                <label for="room_field">Room Name</label>
+              </div>
+              <div class="col s2">
+                <a id="join_button" class="waves-effect waves-light btn">Join</a>
+              </div>
+            </div>
+          </form>
+        </div>
+
+
+      <!--Import jQuery before materialize.js-->
+      <script src="scripts/system.js"></script>
+      <script src="scripts/main.js"></script>
+      <script >
+      SystemJS.import("clientDemo/clientProtocol");
+
+    </script>
+      <!--script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-alpha.1/js/materialize.min.js"></script>
+
+
+    </body>
+  </html>

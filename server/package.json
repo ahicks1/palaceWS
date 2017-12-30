@@ -1,0 +1,16 @@
+{
+  "name": "avalon_server",
+  "version": "1.0.0",
+  "description": "this is the ws server that handles storing all information",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "alexander hicks",
+  "license": "ISC",
+  "dependencies": {
+    "@types/websocket": "0.0.35",
+    "@types/ws": "^3.2.1",
+    "ws": "^3.2.0"
+  }
+}
