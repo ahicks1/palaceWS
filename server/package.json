@@ -1,8 +1,8 @@
 {
-  "name": "avalon_server",
+  "name": "palace_server",
   "version": "1.0.0",
-  "description": "this is the ws server that handles storing all information",
-  "main": "index.js",
+  "description": "a room based WebSocket server application",
+  "main": "out/server/serverMain.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
