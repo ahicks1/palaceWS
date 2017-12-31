@@ -6,15 +6,24 @@ var connectionType;
     connectionType[connectionType["CONTROLLER"] = 0] = "CONTROLLER";
     connectionType[connectionType["CLIENT"] = 1] = "CLIENT";
 })(connectionType = exports.connectionType || (exports.connectionType = {}));
+var messageTarget;
+(function (messageTarget) {
+    messageTarget[messageTarget["ALL"] = 0] = "ALL";
+    messageTarget[messageTarget["CONTROLLER"] = 1] = "CONTROLLER";
+    messageTarget[messageTarget["TARGETED"] = 2] = "TARGETED";
+    messageTarget[messageTarget["SERVER"] = 3] = "SERVER"; //Sent to the server
+})(messageTarget = exports.messageTarget || (exports.messageTarget = {}));
 /** Class representing an outbound message */
 var serverMessage = (function () {
     /**
      * Create a new serverMessage
-     * @param ts - The list of targets by name; blank for init
+     * @param target - a messageTarget representing the destination
+     * @param tags - The list of targets by name when targeted
      * @param data - The payload that gets stringified
      */
-    function serverMessage(ts, data) {
-        this.targets = ts;
+    function serverMessage(target, tags, data) {
+        this.target = target;
+        this.tags = tags;
         this.payload = JSON.stringify(data);
     }
     return serverMessage;
@@ -32,7 +41,7 @@ function getClientInitPacket(name, room) {
         name: name
     };
     //Empty target
-    var ret = new serverMessage([], clientInfo);
+    var ret = new serverMessage(messageTarget.SERVER, [], clientInfo);
     return JSON.stringify(ret);
 }
 exports.getClientInitPacket = getClientInitPacket;
@@ -47,7 +56,7 @@ function getControllerInitPacket(name, room) {
         room: room,
         name: name
     };
-    var ret = new serverMessage([], controllerInfo);
+    var ret = new serverMessage(messageTarget.SERVER, [], controllerInfo);
     return JSON.stringify(ret);
 }
 exports.getControllerInitPacket = getControllerInitPacket;

@@ -2,6 +2,10 @@ import * as WS from "ws";
 import * as SC from "../protocolCore/socketCore"
 import * as http from 'http';
 
+
+/** A typescript intersection type */
+type palaceConn = WS & connMeta;
+
 /** An association list between name and palaceRoom */
 let roomList:any = {};
 
@@ -23,9 +27,10 @@ function handleNewConnection(ws:WS,req:http.IncomingMessage) {
   ws.on('message', function incoming(raw) {
     //TODO: AJH ensure that 'raw' can be parsed
     let msg: SC.serverMessage = JSON.parse(raw.toString());
+    console.log(raw.toString());
 
     // Handle init message
-    if(connection.room == undefined && msg.targets.length == 0) {
+    if(connection.room == undefined && msg.target == SC.messageTarget.SERVER) {
 
       console.log("Init message:" + msg.payload);
       //TODO: AJH ensure that 'msg.payload' can be parsed
@@ -61,8 +66,19 @@ function handleNewConnection(ws:WS,req:http.IncomingMessage) {
 
       }
     //Handle standard serverMessage
-    } else if(connection.room != undefined && msg.targets.length != 0){
+    } else if(connection.room != undefined && msg.target != SC.messageTarget.SERVER){
+      if(msg.target == SC.messageTarget.CONTROLLER) {
 
+      } else if(msg.target == SC.messageTarget.ALL) {
+
+      } else if(msg.target == SC.messageTarget.TARGETED) {
+
+      } else {
+        //Message is meant for server; Ignoring for now
+      }
+    //Handle unkown message by terminating connection
+    } else {
+      connection.close(1000,"Unexpected message sent before init");
     }
 
   });
@@ -77,7 +93,7 @@ function handleNewConnection(ws:WS,req:http.IncomingMessage) {
         for (let c in roomList[connection.room].clients) {
           console.log(c);
           roomList[connection.room].clients[c].close(1000,"controller disconnected");
-          delete roomList[connection.room].clients[c]; // = undefined;
+          delete roomList[connection.room].clients[c];
         }
         //All clients are deleted; delete room
         delete roomList[connection.room];
@@ -102,9 +118,6 @@ function addMetaWS(ws:WS,meta:connMeta): palaceConn {
   (<any>ws).publicName = meta.publicName;
   return <palaceConn>ws;
 }
-
-/** A typescript intersection type */
-type palaceConn = WS & connMeta;
 
 /** Holds metadata */
 class connMeta {

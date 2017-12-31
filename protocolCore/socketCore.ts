@@ -4,17 +4,28 @@ export enum connectionType {
   CLIENT,
 }
 
+export enum messageTarget {
+  ALL, //Broadcast to all other connections including controller
+  CONTROLLER, //Sent to the controller
+  TARGETED, //Sent to every name listed in targets
+  SERVER //Sent to the server
+}
+
 /** Class representing an outbound message */
 export class serverMessage {
-  targets:string[];
+  target:messageTarget;
+  tags:string[]; //Ususally used to list targets
   payload:string;
+
   /**
    * Create a new serverMessage
-   * @param ts - The list of targets by name; blank for init
+   * @param target - a messageTarget representing the destination
+   * @param tags - The list of targets by name when targeted
    * @param data - The payload that gets stringified
    */
-  constructor(ts:string[],data:any){
-    this.targets = ts;
+  constructor(target:messageTarget,tags:string[],data:any){
+    this.target = target;
+    this.tags = tags;
     this.payload = JSON.stringify(data);
 
   }
@@ -33,7 +44,7 @@ export function getClientInitPacket(name:string,room:string): string{
 		name:name
 	}
   //Empty target
-  let ret = new serverMessage([],clientInfo);
+  let ret = new serverMessage(messageTarget.SERVER,[],clientInfo);
   return JSON.stringify(ret);
 
 }
@@ -50,7 +61,7 @@ export function getControllerInitPacket(name:string,room:string): string{
 		name:name
 
 	}
-  let ret = new serverMessage([],controllerInfo);
+  let ret = new serverMessage(messageTarget.SERVER,[],controllerInfo);
   return JSON.stringify(ret);
 
 }

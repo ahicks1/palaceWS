@@ -17,8 +17,9 @@ function handleNewConnection(ws, req) {
     ws.on('message', function incoming(raw) {
         //TODO: AJH ensure that 'raw' can be parsed
         var msg = JSON.parse(raw.toString());
+        console.log(raw.toString());
         // Handle init message
-        if (connection.room == undefined && msg.targets.length == 0) {
+        if (connection.room == undefined && msg.target == SC.messageTarget.SERVER) {
             console.log("Init message:" + msg.payload);
             //TODO: AJH ensure that 'msg.payload' can be parsed
             var init = JSON.parse(msg.payload);
@@ -51,7 +52,20 @@ function handleNewConnection(ws, req) {
             }
             //Handle standard serverMessage
         }
-        else if (connection.room != undefined && msg.targets.length != 0) {
+        else if (connection.room != undefined && msg.target != SC.messageTarget.SERVER) {
+            if (msg.target == SC.messageTarget.CONTROLLER) {
+            }
+            else if (msg.target == SC.messageTarget.ALL) {
+            }
+            else if (msg.target == SC.messageTarget.TARGETED) {
+            }
+            else {
+                //Message is meant for server; Ignoring for now
+            }
+            //Handle unkown message by terminating connection
+        }
+        else {
+            connection.close(1000, "Unexpected message sent before init");
         }
     });
     /* Event listener handling closed connection events */
@@ -64,7 +78,7 @@ function handleNewConnection(ws, req) {
                 for (var c in roomList[connection.room].clients) {
                     console.log(c);
                     roomList[connection.room].clients[c].close(1000, "controller disconnected");
-                    delete roomList[connection.room].clients[c]; // = undefined;
+                    delete roomList[connection.room].clients[c];
                 }
                 //All clients are deleted; delete room
                 delete roomList[connection.room];

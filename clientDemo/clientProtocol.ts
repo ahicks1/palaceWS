@@ -12,5 +12,5 @@ var username;
 function yesConnect(): void{
 	username = (<HTMLInputElement> document.getElementById('username_field')).value;
 	room = (<HTMLInputElement> document.getElementById('room_field')).value;
-	websocket.send(SC.getClientInitPacket(username,room));
+	websocket.send(SC.getClientInitPacket(username,room)); 
 }
