@@ -6,5 +6,5 @@ The bootstrapping code in index.html is as follows:
 > \<script src="scripts/system.js">\</script> \
 > \<script src="scripts/main.js">\</script> \
 > \<script> \
-> SystemJS.import("client/clientMain"); \
+> SystemJS.import("controllerDemo/controllerProtocol"); \
 > \</script>

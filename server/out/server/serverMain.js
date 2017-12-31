@@ -2,36 +2,47 @@
 exports.__esModule = true;
 var WS = require("ws");
 var SC = require("../protocolCore/socketCore");
-var gamelst = {}; //An association list between name and serverGame
+/** An association list between name and palaceRoom */
+var roomList = {};
+//Start the server
 var server = new WS.Server({ port: 8080 });
-server.on('connection', handleNewConnection);
 console.log("started");
-//let msg = new SC.serverMessage(["1","Hello"],{name:"Dude"});
+server.on('connection', handleNewConnection);
+/** Called whenever a new connection is recieved */
 function handleNewConnection(ws, req) {
     console.log('New Connection, waiting for init message');
-    var meta = addMetaWS(ws, new connMeta);
+    /** Intersection type adding palace data to ws connection */
+    var connection = addMetaWS(ws, new connMeta);
+    /** Event listener handling incoming messages*/
     ws.on('message', function incoming(raw) {
+        //TODO: AJH ensure that 'raw' can be parsed
         var msg = JSON.parse(raw.toString());
-        //console.log(meta.room);
-        //Handle init message
-        if (meta.room == undefined && msg.targets.length == 0) {
+        // Handle init message
+        if (connection.room == undefined && msg.targets.length == 0) {
             console.log("Init message:" + msg.payload);
+            //TODO: AJH ensure that 'msg.payload' can be parsed
             var init = JSON.parse(msg.payload);
-            //Check if controller or client
+            // Check if controller or client
             if (init.type == SC.connectionType.CONTROLLER) {
+                // Ensure room doesn't exist already
                 if (init.room != undefined && init.name != undefined) {
-                    meta.room = init.room;
-                    meta.publicName = init.name;
-                    gamelst[init.room] = new serverGame(init.room, meta);
-                    console.log("created new game with name: " + init.room);
+                    connection.room = init.room;
+                    connection.publicName = init.name;
+                    // Store the new room in the list of rooms
+                    roomList[init.room] = new palaceRoom(init.room, connection);
+                    console.log("created new room with name: " + init.room);
+                }
+                else {
+                    // Drop connection because room already exists
+                    connection.close(1000, "Room already exists");
                 }
             }
             else if (init.type == SC.connectionType.CLIENT) {
-                //check to see if game exists
-                if (gamelst[init.room] != undefined) {
-                    meta.room = init.room;
-                    meta.publicName = init.name;
-                    gamelst[init.room].clients[init.name] = meta;
+                // Only connect if
+                if (roomList[init.room] != undefined) {
+                    connection.room = init.room;
+                    connection.publicName = init.name;
+                    roomList[init.room].clients[init.name] = connection;
                     console.log("client " + init.name + " joined " + init.room);
                 }
                 else {
@@ -40,44 +51,58 @@ function handleNewConnection(ws, req) {
             }
             //Handle standard serverMessage
         }
-        else if (meta.room != undefined && msg.targets.length == 0) {
+        else if (connection.room != undefined && msg.targets.length != 0) {
         }
     });
+    /* Event listener handling closed connection events */
     ws.on('close', function closed(code, reason) {
-        if (meta.room != undefined && gamelst[meta.room] != undefined) {
-            if (gamelst[meta.room].controller.publicName == meta.publicName) {
+        //Ensure connection both contained a room and the room exists
+        if (connection.room != undefined && roomList[connection.room] != undefined) {
+            if (roomList[connection.room].controller.publicName == connection.publicName) {
                 //Connection closed was the controller; delete all clients
-                console.log("controller connection closed, deleting game");
-                for (var c in gamelst[meta.room].clients) {
+                console.log("controller connection closed, deleting room");
+                for (var c in roomList[connection.room].clients) {
                     console.log(c);
-                    gamelst[meta.room].clients[c].close(1000, "controller disconnected");
-                    delete gamelst[meta.room].clients[c]; // = undefined;
+                    roomList[connection.room].clients[c].close(1000, "controller disconnected");
+                    delete roomList[connection.room].clients[c]; // = undefined;
                 }
                 //All clients are deleted; delete room
-                delete gamelst[meta.room]; // = undefined;
+                delete roomList[connection.room];
             }
             else {
                 console.log("client connection closed");
-                delete gamelst[meta.room].clients[meta.publicName]; //= undefined;
+                delete roomList[connection.room].clients[connection.publicName];
             }
         }
     });
 }
+/**
+ * Adds palace metadata to a basic WS connection
+ * @param ws - The WS connection to attach the metadata to
+ * @param meta - The metadata to attach
+ */
 function addMetaWS(ws, meta) {
     ws.room = meta.room;
     ws.publicName = meta.publicName;
     return ws;
 }
+/** Holds metadata */
 var connMeta = (function () {
     function connMeta() {
     }
     return connMeta;
 }());
-var serverGame = (function () {
-    function serverGame(name, controller) {
+/** Stores all information about a room */
+var palaceRoom = (function () {
+    /**
+     * Creates a new room
+     * @param name - The name of the room
+     * @param controller - The controller creating the room
+     */
+    function palaceRoom(name, controller) {
         this.name = name;
         this.controller = controller;
         this.clients = {};
     }
-    return serverGame;
+    return palaceRoom;
 }());

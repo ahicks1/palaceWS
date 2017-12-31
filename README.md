@@ -6,6 +6,8 @@ The basic design is a system of rooms where each room has a controller and a num
 
 The server handles relaying all messages between destinations and handles all connection initialization or cleanup.
 
+The controller is notified whenever a client connects, but notifying the clients of another connection must be done by the controller implementation if needed.
+
 ## Requirements:
  ### Server :
    * Node.js

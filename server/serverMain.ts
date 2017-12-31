@@ -2,101 +2,131 @@ import * as WS from "ws";
 import * as SC from "../protocolCore/socketCore"
 import * as http from 'http';
 
-let gamelst:any = {}; //An association list between name and serverGame
+/** An association list between name and palaceRoom */
+let roomList:any = {};
+
+//Start the server
 const server = new WS.Server({ port: 8080 });
+console.log("started");
 server.on('connection', handleNewConnection);
 
-console.log("started");
-//let msg = new SC.serverMessage(["1","Hello"],{name:"Dude"});
 
 
+/** Called whenever a new connection is recieved */
 function handleNewConnection(ws:WS,req:http.IncomingMessage) {
   console.log('New Connection, waiting for init message');
-  let meta = addMetaWS(ws,new connMeta);
 
+  /** Intersection type adding palace data to ws connection */
+  let connection = addMetaWS(ws,new connMeta);
+
+  /** Event listener handling incoming messages*/
   ws.on('message', function incoming(raw) {
+    //TODO: AJH ensure that 'raw' can be parsed
     let msg: SC.serverMessage = JSON.parse(raw.toString());
-    //console.log(meta.room);
 
-    //Handle init message
-    if(meta.room == undefined && msg.targets.length == 0) {
-      console.log("Init message:" +msg.payload);
+    // Handle init message
+    if(connection.room == undefined && msg.targets.length == 0) {
+
+      console.log("Init message:" + msg.payload);
+      //TODO: AJH ensure that 'msg.payload' can be parsed
       let init = JSON.parse(msg.payload);
 
-      //Check if controller or client
+      // Check if controller or client
       if(init.type == SC.connectionType.CONTROLLER) {
 
-
+        // Ensure room doesn't exist already
         if(init.room != undefined && init.name != undefined ) {
-          meta.room = init.room;
-          meta.publicName = init.name;
-          gamelst[init.room] = new serverGame(init.room,meta);
-          console.log("created new game with name: "+init.room);
+          connection.room = init.room;
+          connection.publicName = init.name;
 
+          // Store the new room in the list of rooms
+          roomList[init.room] = new palaceRoom(init.room,connection);
+          console.log("created new room with name: "+init.room);
+
+        } else {
+          // Drop connection because room already exists
+          connection.close(1000,"Room already exists");
         }
+
       } else if(init.type == SC.connectionType.CLIENT) {
-        //check to see if game exists
-        if(gamelst[init.room] != undefined) {
-          meta.room = init.room;
-          meta.publicName = init.name;
-          gamelst[init.room].clients[init.name] = meta;
+        // Only connect if
+        if(roomList[init.room] != undefined) {
+          connection.room = init.room;
+          connection.publicName = init.name;
+          roomList[init.room].clients[init.name] = connection;
           console.log("client "+init.name+" joined "+init.room);
         } else {
           console.log("room doesn't exist");
         }
+
       }
     //Handle standard serverMessage
-  } else if(meta.room != undefined && msg.targets.length == 0){
+    } else if(connection.room != undefined && msg.targets.length != 0){
 
     }
 
-
-
-
-
   });
 
-
+  /* Event listener handling closed connection events */
   ws.on('close', function closed(code,reason) {
-    if(meta.room != undefined && gamelst[meta.room] != undefined) {
-      if(gamelst[meta.room].controller.publicName == meta.publicName) {
+    //Ensure connection both contained a room and the room exists
+    if(connection.room != undefined && roomList[connection.room] != undefined) {
+      if(roomList[connection.room].controller.publicName == connection.publicName) {
         //Connection closed was the controller; delete all clients
-        console.log("controller connection closed, deleting game");
-        for (let c in gamelst[meta.room].clients) {
+        console.log("controller connection closed, deleting room");
+        for (let c in roomList[connection.room].clients) {
           console.log(c);
-          gamelst[meta.room].clients[c].close(1000,"controller disconnected");
-          delete gamelst[meta.room].clients[c]; // = undefined;
+          roomList[connection.room].clients[c].close(1000,"controller disconnected");
+          delete roomList[connection.room].clients[c]; // = undefined;
         }
         //All clients are deleted; delete room
-        delete gamelst[meta.room];// = undefined;
-
+        delete roomList[connection.room];
 
       } else {
         console.log("client connection closed");
-        delete gamelst[meta.room].clients[meta.publicName] //= undefined;
+        delete roomList[connection.room].clients[connection.publicName];
       }
-  }
+    }
   });
 
 
 }
 
+/**
+ * Adds palace metadata to a basic WS connection
+ * @param ws - The WS connection to attach the metadata to
+ * @param meta - The metadata to attach
+ */
 function addMetaWS(ws:WS,meta:connMeta): palaceConn {
   (<any>ws).room = meta.room;
   (<any>ws).publicName = meta.publicName;
   return <palaceConn>ws;
 }
+
+/** A typescript intersection type */
 type palaceConn = WS & connMeta;
 
+/** Holds metadata */
 class connMeta {
   room:string;
   publicName:string;
 }
-class serverGame {
+
+/** Stores all information about a room */
+class palaceRoom {
+  /** The room name */
   name:string;
-  controller:connMeta;
-  clients:any; //an association list between name and palaceConn
-  constructor(name:string,controller:connMeta) {
+  /** The controller for the room */
+  controller:palaceConn;
+  /** An association list between name and palaceConn */
+  clients:any;
+
+  /**
+   * Creates a new room
+   * @param name - The name of the room
+   * @param controller - The controller creating the room
+   */
+  constructor(name:string,controller:palaceConn) {
     this.name = name;
     this.controller = controller;
     this.clients = {};
