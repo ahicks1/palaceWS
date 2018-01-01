@@ -19,11 +19,16 @@
         <div class="row">
           <form class="col s12">
             <div class="row">
-              <div class="input-field col s12 m5">
+
+              <div class="input-field col s12 m3">
                 <input id="username_field" type="text" class="validate">
                 <label for="username_field">Username</label>
               </div>
-              <div class="input-field col s12 m5">
+              <div class="input-field col s12 m3">
+                <input id="ip_field" type="text" class="validate">
+                <label for="ip_field">IP</label>
+              </div>
+              <div class="input-field col s12 m3">
                 <input id="room_field" type="text" class="validate">
                 <label for="room_field">Room Name</label>
               </div>
@@ -34,8 +39,23 @@
           </form>
         </div>
 
-        
+        <div class="row">
+          
+          <form class="col s12">
+            <div class="row">
+              <div class="input-field col s12 m5">
+                <input id="message_field" type="text" class="validate">
+                <label for="message_field">Message for all</label>
+              </div>
+              <div class="col s2">
+                <a id="send_button" class="waves-effect waves-light btn">Send</a>
+              </div>
+            </div>
+          </form>
+        </div>
 
+        <div id="messages">
+      </div>
       </div>
 
 

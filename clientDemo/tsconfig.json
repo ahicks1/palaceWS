@@ -8,7 +8,6 @@
        "target":"ES3",
        "module":"system",
        "outFile":"./scripts/main.js",
-       "noImplicitAny" : true,
-       "checkJs": true
+       "noImplicitAny" : true
    }
 }

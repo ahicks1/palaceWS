@@ -32,6 +32,11 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
         return JSON.stringify(ret);
     }
     exports_1("getControllerInitPacket", getControllerInitPacket);
+    function getPacketAll(payload) {
+        var ret = new serverMessage(messageTarget.ALL, [], payload);
+        return JSON.stringify(ret);
+    }
+    exports_1("getPacketAll", getPacketAll);
     var connectionType, messageTarget, serverMessage;
     return {
         setters: [],
@@ -73,15 +78,32 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
     var __moduleName = context_2 && context_2.id;
     function joinClicked(event) {
         console.log("join pressed");
-        websocket = new WebSocket("ws://localhost:8080"); //NOTE: change this later to be any IP
+        var ip = document.getElementById('ip_field').value;
+        if (ip == "")
+            ip = "localhost";
+        websocket = new WebSocket("ws://" + ip + ":8080"); //NOTE: change this later to be any IP
         websocket.onopen = yesConnect;
+        websocket.onmessage = messageHandler;
+    }
+    function messageClicked(event) {
+        var message = document.getElementById('message_field').value;
+        websocket.send(SC.getPacketAll(message));
     }
     function yesConnect() {
         username = document.getElementById('username_field').value;
         room = document.getElementById('room_field').value;
-        websocket.send(SC.getClientInitPacket(username, room));
+        if (document.getElementById('controller_field').checked == true) {
+            console.log("ischecked");
+            websocket.send(SC.getControllerInitPacket(username, room));
+        }
+        else {
+            websocket.send(SC.getClientInitPacket(username, room));
+        }
     }
-    var SC, websocket, room, username;
+    function messageHandler(ev) {
+        messageArea.innerText += "\n" + ev.data;
+    }
+    var SC, messageArea, websocket, room, username;
     return {
         setters: [
             function (SC_1) {
@@ -90,6 +112,8 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
         ],
         execute: function () {
             document.getElementById('join_button').onclick = joinClicked;
+            document.getElementById('send_button').onclick = messageClicked;
+            messageArea = document.getElementById('messages');
         }
     };
 });

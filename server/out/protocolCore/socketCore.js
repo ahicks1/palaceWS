@@ -60,3 +60,8 @@ function getControllerInitPacket(name, room) {
     return JSON.stringify(ret);
 }
 exports.getControllerInitPacket = getControllerInitPacket;
+function getPacketAll(payload) {
+    var ret = new serverMessage(messageTarget.ALL, [], payload);
+    return JSON.stringify(ret);
+}
+exports.getPacketAll = getPacketAll;

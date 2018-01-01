@@ -70,7 +70,10 @@ function handleNewConnection(ws:WS,req:http.IncomingMessage) {
       if(msg.target == SC.messageTarget.CONTROLLER) {
 
       } else if(msg.target == SC.messageTarget.ALL) {
-
+        for (let conn in roomList[connection.room].clients) {
+        roomList[connection.room].clients[conn].send(msg.payload);
+        }
+        roomList[connection.room].controller.send(msg.payload);
       } else if(msg.target == SC.messageTarget.TARGETED) {
 
       } else {

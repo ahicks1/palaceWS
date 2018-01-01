@@ -56,6 +56,10 @@ function handleNewConnection(ws, req) {
             if (msg.target == SC.messageTarget.CONTROLLER) {
             }
             else if (msg.target == SC.messageTarget.ALL) {
+                for (var conn in roomList[connection.room].clients) {
+                    roomList[connection.room].clients[conn].send(msg.payload);
+                }
+                roomList[connection.room].controller.send(msg.payload);
             }
             else if (msg.target == SC.messageTarget.TARGETED) {
             }

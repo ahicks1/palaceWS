@@ -65,3 +65,8 @@ export function getControllerInitPacket(name:string,room:string): string{
   return JSON.stringify(ret);
 
 }
+
+export function getPacketAll(payload:any): string {
+  let ret = new serverMessage(messageTarget.ALL,[],payload);
+  return JSON.stringify(ret);
+}
