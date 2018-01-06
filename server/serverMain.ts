@@ -40,7 +40,7 @@ function handleNewConnection(ws:WS,req:http.IncomingMessage) {
       if(init.type == SC.connectionType.CONTROLLER) {
 
         // Ensure room doesn't exist already
-        if(init.room != undefined && init.name != undefined ) {
+        if(init.room != undefined && init.name != undefined && roomList[init.room] == undefined) {
           connection.room = init.room;
           connection.publicName = init.name;
 
@@ -68,14 +68,21 @@ function handleNewConnection(ws:WS,req:http.IncomingMessage) {
     //Handle standard serverMessage
     } else if(connection.room != undefined && msg.target != SC.messageTarget.SERVER){
       if(msg.target == SC.messageTarget.CONTROLLER) {
-
+        roomList[connection.room].controller.send(msg.payload);
       } else if(msg.target == SC.messageTarget.ALL) {
         for (let conn in roomList[connection.room].clients) {
         roomList[connection.room].clients[conn].send(msg.payload);
         }
         roomList[connection.room].controller.send(msg.payload);
       } else if(msg.target == SC.messageTarget.TARGETED) {
+        for (let conn of msg.tags) {
+          if(roomList[connection.room].clients[conn] != undefined) {
+            roomList[connection.room].clients[conn].send(msg.payload);
+          } else if(roomList[connection.room].controller.publicName == conn) {
+            roomList[connection.room].controller.send(msg.payload);
+          }
 
+        }
       } else {
         //Message is meant for server; Ignoring for now
       }

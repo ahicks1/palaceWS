@@ -11,6 +11,23 @@ export enum messageTarget {
   SERVER //Sent to the server
 }
 
+/** Types a message targeting the server can have */
+export enum serverTargetTypes {
+  START, //Start a server as controller TODO
+  JOIN, //Join as client DONE
+  GET_CLIENTS, //List of all clients in room TODO
+  CONFIGURE //Set room settings TODO
+
+}
+
+/** Types a message coming from the server can have */
+export enum serverOutTypes {
+  NEW_CLIENT, //New cliend joined the room TODO
+  LOST_CLIENT, //Client disconnected from the room TODO
+  CONFIGURATION //Room configuration object TODO
+
+}
+
 /** Class representing an outbound message */
 export class serverMessage {
   target:messageTarget;
@@ -68,5 +85,10 @@ export function getControllerInitPacket(name:string,room:string): string{
 
 export function getPacketAll(payload:any): string {
   let ret = new serverMessage(messageTarget.ALL,[],payload);
+  return JSON.stringify(ret);
+}
+
+export function getPacket(payload:any,targets:string[]): string {
+  let ret = new serverMessage(messageTarget.TARGETED,targets,payload);
   return JSON.stringify(ret);
 }

@@ -37,7 +37,12 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
         return JSON.stringify(ret);
     }
     exports_1("getPacketAll", getPacketAll);
-    var connectionType, messageTarget, serverMessage;
+    function getPacket(payload, targets) {
+        var ret = new serverMessage(messageTarget.TARGETED, targets, payload);
+        return JSON.stringify(ret);
+    }
+    exports_1("getPacket", getPacket);
+    var connectionType, messageTarget, serverTargetTypes, serverOutTypes, serverMessage;
     return {
         setters: [],
         execute: function () {
@@ -54,6 +59,21 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
                 messageTarget[messageTarget["SERVER"] = 3] = "SERVER"; //Sent to the server
             })(messageTarget || (messageTarget = {}));
             exports_1("messageTarget", messageTarget);
+            /** Types a message targeting the server can have */
+            (function (serverTargetTypes) {
+                serverTargetTypes[serverTargetTypes["START"] = 0] = "START";
+                serverTargetTypes[serverTargetTypes["JOIN"] = 1] = "JOIN";
+                serverTargetTypes[serverTargetTypes["GET_CLIENTS"] = 2] = "GET_CLIENTS";
+                serverTargetTypes[serverTargetTypes["CONFIGURE"] = 3] = "CONFIGURE"; //Set room settings TODO
+            })(serverTargetTypes || (serverTargetTypes = {}));
+            exports_1("serverTargetTypes", serverTargetTypes);
+            /** Types a message coming from the server can have */
+            (function (serverOutTypes) {
+                serverOutTypes[serverOutTypes["NEW_CLIENT"] = 0] = "NEW_CLIENT";
+                serverOutTypes[serverOutTypes["LOST_CLIENT"] = 1] = "LOST_CLIENT";
+                serverOutTypes[serverOutTypes["CONFIGURATION"] = 2] = "CONFIGURATION"; //Room configuration object TODO
+            })(serverOutTypes || (serverOutTypes = {}));
+            exports_1("serverOutTypes", serverOutTypes);
             /** Class representing an outbound message */
             serverMessage = (function () {
                 /**
@@ -78,16 +98,29 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
     var __moduleName = context_2 && context_2.id;
     function joinClicked(event) {
         console.log("join pressed");
-        var ip = document.getElementById('ip_field').value;
-        if (ip == "")
-            ip = "localhost";
+        var ip = window.location.hostname; //(<HTMLInputElement> document.getElementById('ip_field')).value;
+        //if(ip == "") ip = window.location.hostname;
         websocket = new WebSocket("ws://" + ip + ":8080"); //NOTE: change this later to be any IP
         websocket.onopen = yesConnect;
         websocket.onmessage = messageHandler;
     }
     function messageClicked(event) {
+        var selector = document.getElementById('target');
+        var targets = [];
+        for (var i = 0; i < selector.selectedOptions.length; i++) {
+            console.log(selector.selectedOptions[i].text);
+            targets.push(selector.selectedOptions[i].text);
+        }
         var message = document.getElementById('message_field').value;
-        websocket.send(SC.getPacketAll(message));
+        if (targets.lastIndexOf("All") != -1) {
+            console.log("broadcasting to all");
+            websocket.send(SC.getPacketAll(message));
+        }
+        else {
+            websocket.send(SC.getPacket(message, targets));
+        }
+        //targets.add(new Option("text", "value", false, false));
+        //(<any>$('select')).material_select();
     }
     function yesConnect() {
         username = document.getElementById('username_field').value;

@@ -13,6 +13,21 @@ var messageTarget;
     messageTarget[messageTarget["TARGETED"] = 2] = "TARGETED";
     messageTarget[messageTarget["SERVER"] = 3] = "SERVER"; //Sent to the server
 })(messageTarget = exports.messageTarget || (exports.messageTarget = {}));
+/** Types a message targeting the server can have */
+var serverTargetTypes;
+(function (serverTargetTypes) {
+    serverTargetTypes[serverTargetTypes["START"] = 0] = "START";
+    serverTargetTypes[serverTargetTypes["JOIN"] = 1] = "JOIN";
+    serverTargetTypes[serverTargetTypes["GET_CLIENTS"] = 2] = "GET_CLIENTS";
+    serverTargetTypes[serverTargetTypes["CONFIGURE"] = 3] = "CONFIGURE"; //Set room settings TODO
+})(serverTargetTypes = exports.serverTargetTypes || (exports.serverTargetTypes = {}));
+/** Types a message coming from the server can have */
+var serverOutTypes;
+(function (serverOutTypes) {
+    serverOutTypes[serverOutTypes["NEW_CLIENT"] = 0] = "NEW_CLIENT";
+    serverOutTypes[serverOutTypes["LOST_CLIENT"] = 1] = "LOST_CLIENT";
+    serverOutTypes[serverOutTypes["CONFIGURATION"] = 2] = "CONFIGURATION"; //Room configuration object TODO
+})(serverOutTypes = exports.serverOutTypes || (exports.serverOutTypes = {}));
 /** Class representing an outbound message */
 var serverMessage = (function () {
     /**
@@ -65,3 +80,8 @@ function getPacketAll(payload) {
     return JSON.stringify(ret);
 }
 exports.getPacketAll = getPacketAll;
+function getPacket(payload, targets) {
+    var ret = new serverMessage(messageTarget.TARGETED, targets, payload);
+    return JSON.stringify(ret);
+}
+exports.getPacket = getPacket;

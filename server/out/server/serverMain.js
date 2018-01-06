@@ -26,7 +26,7 @@ function handleNewConnection(ws, req) {
             // Check if controller or client
             if (init.type == SC.connectionType.CONTROLLER) {
                 // Ensure room doesn't exist already
-                if (init.room != undefined && init.name != undefined) {
+                if (init.room != undefined && init.name != undefined && roomList[init.room] == undefined) {
                     connection.room = init.room;
                     connection.publicName = init.name;
                     // Store the new room in the list of rooms
@@ -54,6 +54,7 @@ function handleNewConnection(ws, req) {
         }
         else if (connection.room != undefined && msg.target != SC.messageTarget.SERVER) {
             if (msg.target == SC.messageTarget.CONTROLLER) {
+                roomList[connection.room].controller.send(msg.payload);
             }
             else if (msg.target == SC.messageTarget.ALL) {
                 for (var conn in roomList[connection.room].clients) {
@@ -62,6 +63,15 @@ function handleNewConnection(ws, req) {
                 roomList[connection.room].controller.send(msg.payload);
             }
             else if (msg.target == SC.messageTarget.TARGETED) {
+                for (var _i = 0, _a = msg.tags; _i < _a.length; _i++) {
+                    var conn = _a[_i];
+                    if (roomList[connection.room].clients[conn] != undefined) {
+                        roomList[connection.room].clients[conn].send(msg.payload);
+                    }
+                    else if (roomList[connection.room].controller.publicName == conn) {
+                        roomList[connection.room].controller.send(msg.payload);
+                    }
+                }
             }
             else {
                 //Message is meant for server; Ignoring for now

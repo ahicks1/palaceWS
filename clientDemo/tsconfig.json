@@ -2,6 +2,7 @@
    "include": [
      "../AvalonCore/**/*",
      "**/*"
+     
    ],
    "compileOnSave": true,
    "compilerOptions": {
