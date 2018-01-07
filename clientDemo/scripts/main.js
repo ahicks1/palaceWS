@@ -2,18 +2,38 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
     /**
+     * Parses a message from string(returns undefined if unable to parse)
+     * @param src - The source string to be converted
+     */
+    function parseMessage(src) {
+        var ret;
+        try {
+            var obj = JSON.parse(src);
+            if (obj.source != undefined &&
+                obj.payload != undefined &&
+                obj.type != undefined) {
+                ret = new ClientMessage(obj.source, obj.type, obj.payload);
+            }
+        }
+        catch (e) {
+            return undefined;
+        }
+        return ret;
+    }
+    exports_1("parseMessage", parseMessage);
+    /**
      * Formats a packet for a client to send after connecting
      * @param name - The display name for the client
      * @param room - The room for the client to join
      */
     function getClientInitPacket(name, room) {
         var clientInfo = {
-            type: connectionType.CLIENT,
+            type: serverInTypes.JOIN,
             room: room,
             name: name
         };
         //Empty target
-        var ret = new serverMessage(messageTarget.SERVER, [], clientInfo);
+        var ret = new ServerMessage(messageTarget.SERVER, [], JSON.stringify(clientInfo));
         return JSON.stringify(ret);
     }
     exports_1("getClientInitPacket", getClientInitPacket);
@@ -24,25 +44,44 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
      */
     function getControllerInitPacket(name, room) {
         var controllerInfo = {
-            type: connectionType.CONTROLLER,
+            type: serverInTypes.START,
             room: room,
             name: name
         };
-        var ret = new serverMessage(messageTarget.SERVER, [], controllerInfo);
+        var ret = new ServerMessage(messageTarget.SERVER, [], JSON.stringify(controllerInfo));
         return JSON.stringify(ret);
     }
     exports_1("getControllerInitPacket", getControllerInitPacket);
+    /**
+     * Gets a packet set to broadcast to every open connection in the room
+     * @param payload - The data to broadcast
+     */
     function getPacketAll(payload) {
-        var ret = new serverMessage(messageTarget.ALL, [], payload);
+        var ret = new ServerMessage(messageTarget.ALL, [], payload);
         return JSON.stringify(ret);
     }
     exports_1("getPacketAll", getPacketAll);
+    /**
+     * Gets a packet to send to the provided targets
+     * @param payload - The data to broadcast
+     * @param targets - A list of strings naming connections to target
+     */
     function getPacket(payload, targets) {
-        var ret = new serverMessage(messageTarget.TARGETED, targets, payload);
+        var ret = new ServerMessage(messageTarget.TARGETED, targets, payload);
         return JSON.stringify(ret);
     }
     exports_1("getPacket", getPacket);
-    var connectionType, messageTarget, serverTargetTypes, serverOutTypes, serverMessage;
+    /**
+     * Gets a packet to send to the provided targets
+     * @param payload - The data to broadcast
+     * @param targets - A list of strings naming connections to target
+     */
+    function getPacketController(payload) {
+        var ret = new ServerMessage(messageTarget.CONTROLLER, [], payload);
+        return JSON.stringify(ret);
+    }
+    exports_1("getPacketController", getPacketController);
+    var connectionType, messageTarget, messageSource, serverInTypes, OutType, ConnInfo, RoomData, ServerMessage, ClientMessage;
     return {
         setters: [],
         execute: function () {
@@ -59,37 +98,72 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
                 messageTarget[messageTarget["SERVER"] = 3] = "SERVER"; //Sent to the server
             })(messageTarget || (messageTarget = {}));
             exports_1("messageTarget", messageTarget);
+            (function (messageSource) {
+                messageSource[messageSource["SERVER"] = 0] = "SERVER";
+                messageSource[messageSource["CONTROLLER"] = 1] = "CONTROLLER";
+                messageSource[messageSource["CLIENT"] = 2] = "CLIENT";
+            })(messageSource || (messageSource = {}));
+            exports_1("messageSource", messageSource);
             /** Types a message targeting the server can have */
-            (function (serverTargetTypes) {
-                serverTargetTypes[serverTargetTypes["START"] = 0] = "START";
-                serverTargetTypes[serverTargetTypes["JOIN"] = 1] = "JOIN";
-                serverTargetTypes[serverTargetTypes["GET_CLIENTS"] = 2] = "GET_CLIENTS";
-                serverTargetTypes[serverTargetTypes["CONFIGURE"] = 3] = "CONFIGURE"; //Set room settings TODO
-            })(serverTargetTypes || (serverTargetTypes = {}));
-            exports_1("serverTargetTypes", serverTargetTypes);
+            (function (serverInTypes) {
+                serverInTypes[serverInTypes["START"] = 0] = "START";
+                serverInTypes[serverInTypes["JOIN"] = 1] = "JOIN";
+                serverInTypes[serverInTypes["GET_CLIENTS"] = 2] = "GET_CLIENTS";
+                serverInTypes[serverInTypes["CONFIGURE"] = 3] = "CONFIGURE"; //Set room settings TODO
+            })(serverInTypes || (serverInTypes = {}));
+            exports_1("serverInTypes", serverInTypes);
             /** Types a message coming from the server can have */
-            (function (serverOutTypes) {
-                serverOutTypes[serverOutTypes["NEW_CLIENT"] = 0] = "NEW_CLIENT";
-                serverOutTypes[serverOutTypes["LOST_CLIENT"] = 1] = "LOST_CLIENT";
-                serverOutTypes[serverOutTypes["CONFIGURATION"] = 2] = "CONFIGURATION"; //Room configuration object TODO
-            })(serverOutTypes || (serverOutTypes = {}));
-            exports_1("serverOutTypes", serverOutTypes);
+            (function (OutType) {
+                OutType[OutType["DATA"] = 0] = "DATA";
+                OutType[OutType["CONNECT_AWK"] = 1] = "CONNECT_AWK";
+                OutType[OutType["NEW_CLIENT"] = 2] = "NEW_CLIENT";
+                OutType[OutType["LOST_CLIENT"] = 3] = "LOST_CLIENT";
+                OutType[OutType["CONFIGURATION"] = 4] = "CONFIGURATION"; //Room configuration object TODO
+            })(OutType || (OutType = {}));
+            exports_1("OutType", OutType);
+            ConnInfo = (function () {
+                function ConnInfo() {
+                }
+                return ConnInfo;
+            }());
+            exports_1("ConnInfo", ConnInfo);
+            RoomData = (function () {
+                function RoomData() {
+                }
+                return RoomData;
+            }());
+            exports_1("RoomData", RoomData);
             /** Class representing an outbound message */
-            serverMessage = (function () {
+            ServerMessage = (function () {
                 /**
-                 * Create a new serverMessage
+                 * Create a new ServerMessage
                  * @param target - a messageTarget representing the destination
                  * @param tags - The list of targets by name when targeted
-                 * @param data - The payload that gets stringified
+                 * @param data - The payload as a string
                  */
-                function serverMessage(target, tags, data) {
+                function ServerMessage(target, tags, data) {
                     this.target = target;
                     this.tags = tags;
-                    this.payload = JSON.stringify(data);
+                    this.payload = data;
                 }
-                return serverMessage;
+                return ServerMessage;
             }());
-            exports_1("serverMessage", serverMessage);
+            exports_1("ServerMessage", ServerMessage);
+            /** Class representing an inbound message */
+            ClientMessage = (function () {
+                /**
+                 * Create a new ClientMessage
+                 * @param source - a messageSource representing the source
+                 * @param data - The payload as a string
+                 */
+                function ClientMessage(source, type, data) {
+                    this.source = source;
+                    this.type = type;
+                    this.payload = data;
+                }
+                return ClientMessage;
+            }());
+            exports_1("ClientMessage", ClientMessage);
         }
     };
 });
@@ -108,13 +182,16 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
         var selector = document.getElementById('target');
         var targets = [];
         for (var i = 0; i < selector.selectedOptions.length; i++) {
-            console.log(selector.selectedOptions[i].text);
-            targets.push(selector.selectedOptions[i].text);
+            console.log(selector.selectedOptions[i].value);
+            targets.push(selector.selectedOptions[i].value);
         }
         var message = document.getElementById('message_field').value;
         if (targets.lastIndexOf("All") != -1) {
             console.log("broadcasting to all");
             websocket.send(SC.getPacketAll(message));
+        }
+        else if (targets.lastIndexOf("Controller") != -1) {
+            websocket.send(SC.getPacketController(message));
         }
         else {
             websocket.send(SC.getPacket(message, targets));
@@ -134,9 +211,24 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
         }
     }
     function messageHandler(ev) {
-        messageArea.innerText += "\n" + ev.data;
+        var message = SC.parseMessage(ev.data);
+        if (message != undefined) {
+            if (message.source == SC.messageSource.SERVER) {
+                //Message is from the server, usually a client connected or disconnected
+                console.log(message.payload);
+                if (message.type == SC.OutType.CONNECT_AWK) {
+                    id = JSON.parse(message.payload).id; //TODO: AJH try ... catch!
+                }
+            }
+            else {
+                var str = message.source == SC.messageSource.CONTROLLER
+                    ? "\n Controller says: " + message.payload
+                    : "\n" + message.payload;
+                messageArea.innerText += str;
+            }
+        }
     }
-    var SC, messageArea, websocket, room, username;
+    var SC, websocket, room, username, id, messageArea;
     return {
         setters: [
             function (SC_1) {

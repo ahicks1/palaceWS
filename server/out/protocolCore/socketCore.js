@@ -13,37 +13,92 @@ var messageTarget;
     messageTarget[messageTarget["TARGETED"] = 2] = "TARGETED";
     messageTarget[messageTarget["SERVER"] = 3] = "SERVER"; //Sent to the server
 })(messageTarget = exports.messageTarget || (exports.messageTarget = {}));
+var messageSource;
+(function (messageSource) {
+    messageSource[messageSource["SERVER"] = 0] = "SERVER";
+    messageSource[messageSource["CONTROLLER"] = 1] = "CONTROLLER";
+    messageSource[messageSource["CLIENT"] = 2] = "CLIENT";
+})(messageSource = exports.messageSource || (exports.messageSource = {}));
 /** Types a message targeting the server can have */
-var serverTargetTypes;
-(function (serverTargetTypes) {
-    serverTargetTypes[serverTargetTypes["START"] = 0] = "START";
-    serverTargetTypes[serverTargetTypes["JOIN"] = 1] = "JOIN";
-    serverTargetTypes[serverTargetTypes["GET_CLIENTS"] = 2] = "GET_CLIENTS";
-    serverTargetTypes[serverTargetTypes["CONFIGURE"] = 3] = "CONFIGURE"; //Set room settings TODO
-})(serverTargetTypes = exports.serverTargetTypes || (exports.serverTargetTypes = {}));
+var serverInTypes;
+(function (serverInTypes) {
+    serverInTypes[serverInTypes["START"] = 0] = "START";
+    serverInTypes[serverInTypes["JOIN"] = 1] = "JOIN";
+    serverInTypes[serverInTypes["GET_CLIENTS"] = 2] = "GET_CLIENTS";
+    serverInTypes[serverInTypes["CONFIGURE"] = 3] = "CONFIGURE"; //Set room settings TODO
+})(serverInTypes = exports.serverInTypes || (exports.serverInTypes = {}));
 /** Types a message coming from the server can have */
-var serverOutTypes;
-(function (serverOutTypes) {
-    serverOutTypes[serverOutTypes["NEW_CLIENT"] = 0] = "NEW_CLIENT";
-    serverOutTypes[serverOutTypes["LOST_CLIENT"] = 1] = "LOST_CLIENT";
-    serverOutTypes[serverOutTypes["CONFIGURATION"] = 2] = "CONFIGURATION"; //Room configuration object TODO
-})(serverOutTypes = exports.serverOutTypes || (exports.serverOutTypes = {}));
+var OutType;
+(function (OutType) {
+    OutType[OutType["DATA"] = 0] = "DATA";
+    OutType[OutType["CONNECT_AWK"] = 1] = "CONNECT_AWK";
+    OutType[OutType["NEW_CLIENT"] = 2] = "NEW_CLIENT";
+    OutType[OutType["LOST_CLIENT"] = 3] = "LOST_CLIENT";
+    OutType[OutType["CONFIGURATION"] = 4] = "CONFIGURATION"; //Room configuration object TODO
+})(OutType = exports.OutType || (exports.OutType = {}));
+var ConnInfo = (function () {
+    function ConnInfo() {
+    }
+    return ConnInfo;
+}());
+exports.ConnInfo = ConnInfo;
+var RoomData = (function () {
+    function RoomData() {
+    }
+    return RoomData;
+}());
+exports.RoomData = RoomData;
 /** Class representing an outbound message */
-var serverMessage = (function () {
+var ServerMessage = (function () {
     /**
-     * Create a new serverMessage
+     * Create a new ServerMessage
      * @param target - a messageTarget representing the destination
      * @param tags - The list of targets by name when targeted
-     * @param data - The payload that gets stringified
+     * @param data - The payload as a string
      */
-    function serverMessage(target, tags, data) {
+    function ServerMessage(target, tags, data) {
         this.target = target;
         this.tags = tags;
-        this.payload = JSON.stringify(data);
+        this.payload = data;
     }
-    return serverMessage;
+    return ServerMessage;
 }());
-exports.serverMessage = serverMessage;
+exports.ServerMessage = ServerMessage;
+/** Class representing an inbound message */
+var ClientMessage = (function () {
+    /**
+     * Create a new ClientMessage
+     * @param source - a messageSource representing the source
+     * @param data - The payload as a string
+     */
+    function ClientMessage(source, type, data) {
+        this.source = source;
+        this.type = type;
+        this.payload = data;
+    }
+    return ClientMessage;
+}());
+exports.ClientMessage = ClientMessage;
+/**
+ * Parses a message from string(returns undefined if unable to parse)
+ * @param src - The source string to be converted
+ */
+function parseMessage(src) {
+    var ret;
+    try {
+        var obj = JSON.parse(src);
+        if (obj.source != undefined &&
+            obj.payload != undefined &&
+            obj.type != undefined) {
+            ret = new ClientMessage(obj.source, obj.type, obj.payload);
+        }
+    }
+    catch (e) {
+        return undefined;
+    }
+    return ret;
+}
+exports.parseMessage = parseMessage;
 /**
  * Formats a packet for a client to send after connecting
  * @param name - The display name for the client
@@ -51,12 +106,12 @@ exports.serverMessage = serverMessage;
  */
 function getClientInitPacket(name, room) {
     var clientInfo = {
-        type: connectionType.CLIENT,
+        type: serverInTypes.JOIN,
         room: room,
         name: name
     };
     //Empty target
-    var ret = new serverMessage(messageTarget.SERVER, [], clientInfo);
+    var ret = new ServerMessage(messageTarget.SERVER, [], JSON.stringify(clientInfo));
     return JSON.stringify(ret);
 }
 exports.getClientInitPacket = getClientInitPacket;
@@ -67,21 +122,40 @@ exports.getClientInitPacket = getClientInitPacket;
  */
 function getControllerInitPacket(name, room) {
     var controllerInfo = {
-        type: connectionType.CONTROLLER,
+        type: serverInTypes.START,
         room: room,
         name: name
     };
-    var ret = new serverMessage(messageTarget.SERVER, [], controllerInfo);
+    var ret = new ServerMessage(messageTarget.SERVER, [], JSON.stringify(controllerInfo));
     return JSON.stringify(ret);
 }
 exports.getControllerInitPacket = getControllerInitPacket;
+/**
+ * Gets a packet set to broadcast to every open connection in the room
+ * @param payload - The data to broadcast
+ */
 function getPacketAll(payload) {
-    var ret = new serverMessage(messageTarget.ALL, [], payload);
+    var ret = new ServerMessage(messageTarget.ALL, [], payload);
     return JSON.stringify(ret);
 }
 exports.getPacketAll = getPacketAll;
+/**
+ * Gets a packet to send to the provided targets
+ * @param payload - The data to broadcast
+ * @param targets - A list of strings naming connections to target
+ */
 function getPacket(payload, targets) {
-    var ret = new serverMessage(messageTarget.TARGETED, targets, payload);
+    var ret = new ServerMessage(messageTarget.TARGETED, targets, payload);
     return JSON.stringify(ret);
 }
 exports.getPacket = getPacket;
+/**
+ * Gets a packet to send to the provided targets
+ * @param payload - The data to broadcast
+ * @param targets - A list of strings naming connections to target
+ */
+function getPacketController(payload) {
+    var ret = new ServerMessage(messageTarget.CONTROLLER, [], payload);
+    return JSON.stringify(ret);
+}
+exports.getPacketController = getPacketController;

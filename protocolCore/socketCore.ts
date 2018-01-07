@@ -11,9 +11,15 @@ export enum messageTarget {
   SERVER //Sent to the server
 }
 
+export enum messageSource {
+  SERVER,
+  CONTROLLER,
+  CLIENT
+}
+
 /** Types a message targeting the server can have */
-export enum serverTargetTypes {
-  START, //Start a server as controller TODO
+export enum serverInTypes {
+  START, //Start a server as controller DONE
   JOIN, //Join as client DONE
   GET_CLIENTS, //List of all clients in room TODO
   CONFIGURE //Set room settings TODO
@@ -21,31 +27,84 @@ export enum serverTargetTypes {
 }
 
 /** Types a message coming from the server can have */
-export enum serverOutTypes {
+export enum OutType {
+  DATA,
+  CONNECT_AWK, //Contains the server assigned id of the connection TODO
   NEW_CLIENT, //New cliend joined the room TODO
   LOST_CLIENT, //Client disconnected from the room TODO
   CONFIGURATION //Room configuration object TODO
 
 }
 
+export class ConnInfo {
+  room:string;
+  name:string;
+  id:string;
+}
+
+export class RoomData {
+  name:string;
+  controller:ConnInfo;
+  clients:any;
+}
+
+
 /** Class representing an outbound message */
-export class serverMessage {
+export class ServerMessage {
   target:messageTarget;
   tags:string[]; //Ususally used to list targets
   payload:string;
 
   /**
-   * Create a new serverMessage
+   * Create a new ServerMessage
    * @param target - a messageTarget representing the destination
    * @param tags - The list of targets by name when targeted
-   * @param data - The payload that gets stringified
+   * @param data - The payload as a string
    */
-  constructor(target:messageTarget,tags:string[],data:any){
+  constructor(target:messageTarget,tags:string[],data:string){
     this.target = target;
     this.tags = tags;
-    this.payload = JSON.stringify(data);
-
+    this.payload = data;
   }
+}
+
+/** Class representing an inbound message */
+export class ClientMessage {
+  source:messageSource;
+  type:OutType;
+  payload:string;
+
+  /**
+   * Create a new ClientMessage
+   * @param source - a messageSource representing the source
+   * @param data - The payload as a string
+   */
+  constructor(source:messageSource,type:OutType,data:string){
+    this.source = source;
+    this.type = type;
+    this.payload = data;
+  }
+}
+
+/**
+ * Parses a message from string(returns undefined if unable to parse)
+ * @param src - The source string to be converted
+ */
+export function parseMessage(src:string):ClientMessage {
+  let ret:ClientMessage;
+  try{
+    let obj = JSON.parse(src);
+
+    if( obj.source != undefined &&
+        obj.payload != undefined &&
+        obj.type != undefined) {
+      ret = new ClientMessage(obj.source,obj.type,obj.payload);
+    }
+  }
+  catch(e) {
+    return undefined;
+  }
+  return ret;
 
 }
 
@@ -56,12 +115,12 @@ export class serverMessage {
  */
 export function getClientInitPacket(name:string,room:string): string{
 	let clientInfo:any = {
-		type:connectionType.CLIENT,
+		type:serverInTypes.JOIN,
 		room:room,
 		name:name
 	}
   //Empty target
-  let ret = new serverMessage(messageTarget.SERVER,[],clientInfo);
+  let ret = new ServerMessage(messageTarget.SERVER,[],JSON.stringify(clientInfo));
   return JSON.stringify(ret);
 
 }
@@ -73,22 +132,43 @@ export function getClientInitPacket(name:string,room:string): string{
  */
 export function getControllerInitPacket(name:string,room:string): string{
 	let controllerInfo:any = {
-		type:connectionType.CONTROLLER,
+    type:serverInTypes.START,
 		room:room,
 		name:name
 
 	}
-  let ret = new serverMessage(messageTarget.SERVER,[],controllerInfo);
+  let ret = new ServerMessage(messageTarget.SERVER,[],JSON.stringify(controllerInfo));
   return JSON.stringify(ret);
 
 }
 
-export function getPacketAll(payload:any): string {
-  let ret = new serverMessage(messageTarget.ALL,[],payload);
+
+
+/**
+ * Gets a packet set to broadcast to every open connection in the room
+ * @param payload - The data to broadcast
+ */
+export function getPacketAll(payload:string): string {
+  let ret = new ServerMessage(messageTarget.ALL,[],payload);
   return JSON.stringify(ret);
 }
 
-export function getPacket(payload:any,targets:string[]): string {
-  let ret = new serverMessage(messageTarget.TARGETED,targets,payload);
+/**
+ * Gets a packet to send to the provided targets
+ * @param payload - The data to broadcast
+ * @param targets - A list of strings naming connections to target
+ */
+export function getPacket(payload:string,targets:string[]): string {
+  let ret = new ServerMessage(messageTarget.TARGETED,targets,payload);
+  return JSON.stringify(ret);
+}
+
+/**
+ * Gets a packet to send to the provided targets
+ * @param payload - The data to broadcast
+ * @param targets - A list of strings naming connections to target
+ */
+export function getPacketController(payload:string,): string {
+  let ret = new ServerMessage(messageTarget.CONTROLLER,[],payload);
   return JSON.stringify(ret);
 }
