@@ -118,11 +118,15 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
                 OutType[OutType["CONNECT_AWK"] = 1] = "CONNECT_AWK";
                 OutType[OutType["NEW_CLIENT"] = 2] = "NEW_CLIENT";
                 OutType[OutType["LOST_CLIENT"] = 3] = "LOST_CLIENT";
-                OutType[OutType["CONFIGURATION"] = 4] = "CONFIGURATION"; //Room configuration object TODO
+                OutType[OutType["ROOM_DATA"] = 4] = "ROOM_DATA";
+                OutType[OutType["CONFIGURATION"] = 5] = "CONFIGURATION"; //Room configuration object TODO
             })(OutType || (OutType = {}));
             exports_1("OutType", OutType);
             ConnInfo = (function () {
-                function ConnInfo() {
+                function ConnInfo(room, name, id) {
+                    this.room = room;
+                    this.name = name;
+                    this.id = id;
                 }
                 return ConnInfo;
             }());
@@ -179,7 +183,6 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
         websocket.onmessage = messageHandler;
     }
     function messageClicked(event) {
-        var selector = document.getElementById('target');
         var targets = [];
         for (var i = 0; i < selector.selectedOptions.length; i++) {
             console.log(selector.selectedOptions[i].value);
@@ -219,6 +222,14 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
                 if (message.type == SC.OutType.CONNECT_AWK) {
                     id = JSON.parse(message.payload).id; //TODO: AJH try ... catch!
                 }
+                else if (message.type == SC.OutType.ROOM_DATA) {
+                    //updateClientList()
+                }
+                else if (message.type == SC.OutType.NEW_CLIENT) {
+                    console.log("adding to select");
+                    selector.add(new Option("text", "value", false, false));
+                    $('select').material_select();
+                }
             }
             else {
                 var str = message.source == SC.messageSource.CONTROLLER
@@ -228,7 +239,7 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
             }
         }
     }
-    var SC, websocket, room, username, id, messageArea;
+    var SC, websocket, room, username, id, selector, messageArea;
     return {
         setters: [
             function (SC_1) {
@@ -237,6 +248,7 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
         ],
         execute: function () {
             document.getElementById('join_button').onclick = joinClicked;
+            selector = document.getElementById('target');
             document.getElementById('send_button').onclick = messageClicked;
             messageArea = document.getElementById('messages');
         }

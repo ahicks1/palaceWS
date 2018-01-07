@@ -34,10 +34,14 @@ var OutType;
     OutType[OutType["CONNECT_AWK"] = 1] = "CONNECT_AWK";
     OutType[OutType["NEW_CLIENT"] = 2] = "NEW_CLIENT";
     OutType[OutType["LOST_CLIENT"] = 3] = "LOST_CLIENT";
-    OutType[OutType["CONFIGURATION"] = 4] = "CONFIGURATION"; //Room configuration object TODO
+    OutType[OutType["ROOM_DATA"] = 4] = "ROOM_DATA";
+    OutType[OutType["CONFIGURATION"] = 5] = "CONFIGURATION"; //Room configuration object TODO
 })(OutType = exports.OutType || (exports.OutType = {}));
 var ConnInfo = (function () {
-    function ConnInfo() {
+    function ConnInfo(room, name, id) {
+        this.room = room;
+        this.name = name;
+        this.id = id;
     }
     return ConnInfo;
 }());

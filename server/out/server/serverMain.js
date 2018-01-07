@@ -48,10 +48,21 @@ function handleNewConnection(ws, req) {
                     connection.room = init.room;
                     connection.id = getValidID();
                     connection.name = init.name;
-                    roomList[init.room].clients[init.id] = connection;
+                    roomList[init.room].clients[connection.id] = connection;
                     //sent id to connection
                     connection.send(formatConnectionPacket(connection.id, connection.name));
                     console.log("client " + init.name + " joined " + init.room);
+                    //Send client info about the room
+                    connection.send(formatClientsPacket(connection.room));
+                    var connPacket = formatNewClientPacket(connection);
+                    //Send controller info about the new client
+                    roomList[connection.room].controller.send(connPacket);
+                    //Send info about the new client to all other clients
+                    for (var conn in roomList[init.room].clients) {
+                        if (conn != connection.id) {
+                            roomList[connection.room].clients[conn].send(connPacket);
+                        }
+                    }
                 }
                 else {
                     console.log("room doesn't exist");
@@ -126,12 +137,31 @@ function formatOutPacket(source, payload) {
     var ret = new SC.ClientMessage(source, SC.OutType.DATA, payload);
     return JSON.stringify(ret);
 }
+function formatClientsPacket(room) {
+    var ret = new SC.RoomData;
+    ret.clients = {};
+    ret.name = roomList[room].name;
+    ret.controller = new SC.ConnInfo(roomList[room].name, roomList[room].controller.name, roomList[room].controller.id);
+    //for(let client in room.clients) {
+    for (var conn in roomList[room].clients) {
+        //roomList[connection.room].clients[conn].send(formatOutPacket(source,msg.payload));
+        //}
+        console.log(conn);
+        ret.clients[conn] = new SC.ConnInfo(roomList[room].name, roomList[room].clients[conn].name, conn);
+    }
+    return JSON.stringify(new SC.ClientMessage(SC.messageSource.SERVER, SC.OutType.ROOM_DATA, JSON.stringify(ret)));
+}
 function formatConnectionPacket(id, name) {
     var packet = {
         id: id,
         name: name
     };
     var ret = new SC.ClientMessage(SC.messageSource.SERVER, SC.OutType.CONNECT_AWK, JSON.stringify(packet));
+    return JSON.stringify(ret);
+}
+function formatNewClientPacket(conn) {
+    var packet = new SC.ConnInfo(conn.room, conn.name, conn.id);
+    var ret = new SC.ClientMessage(SC.messageSource.SERVER, SC.OutType.NEW_CLIENT, JSON.stringify(packet));
     return JSON.stringify(ret);
 }
 /**
@@ -149,7 +179,7 @@ var currID = 100; //TODO: AJH make this random
 function getValidID() {
     var ret = currID;
     currID += 1;
-    return ret.toString();
+    return "C" + ret;
 }
 /** Holds metadata */
 var ConnMeta = (function () {

@@ -32,6 +32,7 @@ export enum OutType {
   CONNECT_AWK, //Contains the server assigned id of the connection TODO
   NEW_CLIENT, //New cliend joined the room TODO
   LOST_CLIENT, //Client disconnected from the room TODO
+  ROOM_DATA,
   CONFIGURATION //Room configuration object TODO
 
 }
@@ -40,6 +41,12 @@ export class ConnInfo {
   room:string;
   name:string;
   id:string;
+
+  constructor(room:string,name:string,id:string) {
+    this.room = room;
+    this.name = name;
+    this.id = id;
+  }
 }
 
 export class RoomData {

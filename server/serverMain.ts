@@ -65,10 +65,26 @@ function handleNewConnection(ws:WS,req:http.IncomingMessage) {
           connection.room = init.room;
           connection.id = getValidID();
           connection.name = init.name;
-          roomList[init.room].clients[init.id] = connection;
+          roomList[init.room].clients[connection.id] = connection;
           //sent id to connection
           connection.send(formatConnectionPacket(connection.id,connection.name));
           console.log("client "+init.name+" joined "+init.room);
+          //Send client info about the room
+          connection.send(formatClientsPacket(connection.room));
+
+          let connPacket = formatNewClientPacket(connection)
+          //Send controller info about the new client
+          roomList[connection.room].controller.send(connPacket);
+
+          //Send info about the new client to all other clients
+          for (let conn in roomList[init.room].clients) {
+
+            if(conn != connection.id) {
+              roomList[connection.room].clients[conn].send(connPacket);
+            }
+
+          }
+
         } else {
           console.log("room doesn't exist");
         }
@@ -148,6 +164,31 @@ function formatOutPacket(source:SC.messageSource,payload:string):string {
   return JSON.stringify(ret);
 }
 
+function formatClientsPacket(room:string):string {
+  let ret = new SC.RoomData;
+  ret.clients = {};
+  ret.name = roomList[room].name;
+  ret.controller = new SC.ConnInfo(roomList[room].name,
+                                   roomList[room].controller.name,
+                                  roomList[room].controller.id);
+
+  //for(let client in room.clients) {
+  for (let conn in roomList[room].clients) {
+    //roomList[connection.room].clients[conn].send(formatOutPacket(source,msg.payload));
+    //}
+    console.log(conn);
+    ret.clients[conn] = new SC.ConnInfo(roomList[room].name,
+                                        roomList[room].clients[conn].name,
+                                        conn);
+  }
+
+  return JSON.stringify(new SC.ClientMessage(SC.messageSource.SERVER,
+                                             SC.OutType.ROOM_DATA,
+                                             JSON.stringify(ret)));
+
+}
+
+
 function formatConnectionPacket(id:string,name:string) {
   let packet = {
     id:id,
@@ -159,6 +200,14 @@ function formatConnectionPacket(id:string,name:string) {
   return JSON.stringify(ret);
 }
 
+function formatNewClientPacket(conn:PalaceConn) {
+  let packet = new SC.ConnInfo(conn.room,conn.name,conn.id);
+
+  let ret = new SC.ClientMessage(SC.messageSource.SERVER,
+                            SC.OutType.NEW_CLIENT,
+                            JSON.stringify(packet));
+  return JSON.stringify(ret);
+}
 /**
  * Adds palace metadata to a basic WS connection
  * @param ws - The WS connection to attach the metadata to
@@ -175,7 +224,7 @@ let currID = 100; //TODO: AJH make this random
 function getValidID():string {
   let ret = currID;
   currID += 1;
-  return ret.toString();
+  return "C"+ret;
 }
 
 /** Holds metadata */

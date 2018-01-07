@@ -17,9 +17,10 @@ function joinClicked(event:Event) {
 	websocket.onmessage = messageHandler;
 }
 
+let selector = (<HTMLSelectElement> document.getElementById('target'));
 document.getElementById('send_button').onclick = messageClicked;
 function messageClicked(event:Event) {
-	let selector = (<HTMLSelectElement> document.getElementById('target'));
+
 	let targets = [];
 	for(let i = 0; i < selector.selectedOptions.length; i++) {
 		console.log(selector.selectedOptions[i].value);
@@ -67,6 +68,12 @@ function messageHandler(this:WebSocket,ev:MessageEvent):any {
 			console.log(message.payload);
 			if(message.type == SC.OutType.CONNECT_AWK) {
 				id = JSON.parse(message.payload).id; //TODO: AJH try ... catch!
+			} else if(message.type == SC.OutType.ROOM_DATA) {
+				//updateClientList()
+			} else if(message.type == SC.OutType.NEW_CLIENT) {
+				console.log("adding to select");
+				selector.add(new Option("text", "value", false, false));
+				(<any>$('select')).material_select();
 			}
 		} else {
 			let str = message.source == SC.messageSource.CONTROLLER
