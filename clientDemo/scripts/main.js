@@ -224,10 +224,24 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
                 }
                 else if (message.type == SC.OutType.ROOM_DATA) {
                     //updateClientList()
+                    console.log("room info");
+                    console.log(message.payload);
+                    var packet = JSON.parse(message.payload);
+                    if (packet.controller.id != id) {
+                        selector.add(new Option(packet.controller.name, packet.controller.id, false, false));
+                    }
+                    for (var i in packet.clients) {
+                        var client = packet.clients[i];
+                        console.log(JSON.stringify(client));
+                        if (client.id != id)
+                            selector.add(new Option(client.name, client.id, false, false));
+                    }
+                    $('select').material_select();
                 }
                 else if (message.type == SC.OutType.NEW_CLIENT) {
                     console.log("adding to select");
-                    selector.add(new Option("text", "value", false, false));
+                    var packet = JSON.parse(message.payload);
+                    selector.add(new Option(packet.name, packet.id, false, false));
                     $('select').material_select();
                 }
             }

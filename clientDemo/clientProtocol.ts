@@ -6,7 +6,7 @@ document.getElementById('join_button').onclick = joinClicked;
 var websocket:WebSocket;
 var room;
 var username;
-var id;
+var id: string;
 
 function joinClicked(event:Event) {
 	console.log("join pressed");
@@ -70,9 +70,24 @@ function messageHandler(this:WebSocket,ev:MessageEvent):any {
 				id = JSON.parse(message.payload).id; //TODO: AJH try ... catch!
 			} else if(message.type == SC.OutType.ROOM_DATA) {
 				//updateClientList()
+				console.log("room info");
+				console.log(message.payload);
+				let packet = JSON.parse(message.payload);
+				if(packet.controller.id != id) {
+					selector.add(new Option(packet.controller.name, packet.controller.id, false, false));
+				}
+				for(let i in packet.clients) {
+					let client = packet.clients[i];
+					console.log(JSON.stringify(client));
+					if(client.id != id)
+						selector.add(new Option(client.name, client.id, false, false));
+				}
+				(<any>$('select')).material_select();
+
 			} else if(message.type == SC.OutType.NEW_CLIENT) {
 				console.log("adding to select");
-				selector.add(new Option("text", "value", false, false));
+				let packet = JSON.parse(message.payload);
+				selector.add(new Option(packet.name, packet.id, false, false));
 				(<any>$('select')).material_select();
 			}
 		} else {
