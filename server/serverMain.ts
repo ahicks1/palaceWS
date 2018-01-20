@@ -60,7 +60,7 @@ function handleNewConnection(ws:WS,req:http.IncomingMessage) {
         }
 
       } else if(init.type == SC.serverInTypes.JOIN) {
-        // Only connect if
+        // Only connect if room exists
         if(roomList[init.room] != undefined) {
           connection.room = init.room;
           connection.id = getValidID();
@@ -87,6 +87,7 @@ function handleNewConnection(ws:WS,req:http.IncomingMessage) {
 
         } else {
           console.log("room doesn't exist");
+          connection.close(1000,"Room not found");
         }
 
       }
@@ -168,17 +169,15 @@ function formatClientsPacket(room:string):string {
   let ret = new SC.RoomData;
   ret.clients = {};
   ret.name = roomList[room].name;
-  ret.controller = new SC.ConnInfo(roomList[room].name,
-                                   roomList[room].controller.name,
-                                  roomList[room].controller.id);
+  ret.controller = new SC.ConnInfo(roomList[room].controller.name,
+                                   roomList[room].controller.id);
 
   //for(let client in room.clients) {
   for (let conn in roomList[room].clients) {
     //roomList[connection.room].clients[conn].send(formatOutPacket(source,msg.payload));
     //}
     console.log(conn);
-    ret.clients[conn] = new SC.ConnInfo(roomList[room].name,
-                                        roomList[room].clients[conn].name,
+    ret.clients[conn] = new SC.ConnInfo(roomList[room].clients[conn].name,
                                         conn);
   }
 
@@ -201,7 +200,7 @@ function formatConnectionPacket(id:string,name:string) {
 }
 
 function formatNewClientPacket(conn:PalaceConn) {
-  let packet = new SC.ConnInfo(conn.room,conn.name,conn.id);
+  let packet = new SC.ConnInfo(conn.name,conn.id);
 
   let ret = new SC.ClientMessage(SC.messageSource.SERVER,
                             SC.OutType.NEW_CLIENT,

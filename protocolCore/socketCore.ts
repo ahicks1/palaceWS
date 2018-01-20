@@ -29,21 +29,21 @@ export enum serverInTypes {
 /** Types a message coming from the server can have */
 export enum OutType {
   DATA,
-  CONNECT_AWK, //Contains the server assigned id of the connection TODO
-  NEW_CLIENT, //New cliend joined the room TODO
+  CONNECT_AWK, //Contains the server assigned id of the connection DONE
+  NEW_CLIENT, //New cliend joined the room DONE
   LOST_CLIENT, //Client disconnected from the room TODO
-  ROOM_DATA,
+  ROOM_DATA, // DONE
   CONFIGURATION //Room configuration object TODO
 
 }
 
 export class ConnInfo {
-  room:string;
+  //room:string;
   name:string;
   id:string;
 
-  constructor(room:string,name:string,id:string) {
-    this.room = room;
+  constructor(name:string,id:string) {
+    //this.room = room;
     this.name = name;
     this.id = id;
   }

@@ -7,6 +7,7 @@ var websocket:WebSocket;
 var room;
 var username;
 var id: string;
+var $:any;
 
 function joinClicked(event:Event) {
 	console.log("join pressed");
