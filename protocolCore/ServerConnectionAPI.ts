@@ -14,24 +14,24 @@ export class ServerConnection {
   public stateChangeCallback :(state:connectionStatus) => void;
 
   private _name:string;
-  get name():string {
+  name():string {
     return this._name;
   }
   private _room:string;
-  get room():string {
+  room():string {
     return this._room;
   }
   private _id:string;
-  get id():string {
+  id():string {
     return this._id;
   }
   private _ip:string;
-  get ip():string {
+  ip():string {
     return this._ip;
   }
 
   private _controller:SC.ConnInfo;
-  get controller():SC.ConnInfo {
+  controller():SC.ConnInfo {
     return this._controller;
   }
 
@@ -42,17 +42,17 @@ export class ServerConnection {
   }
 
   private _cType:SC.connectionType;
-  get cType():SC.connectionType {
+  cType():SC.connectionType {
     return this._cType;
   }
 
   private _state:connectionStatus;
-  get state():connectionStatus {
+  state():connectionStatus {
     return this._state;
   }
 
   /* Private members */
-  private ws:WebSocket;
+  ws:WebSocket;
 
 
   /* Public functions */
@@ -70,11 +70,20 @@ export class ServerConnection {
     this._room = room;
     this._state = connectionStatus.DISCONNECTED;
 
+    this._clients = {};
 
 
+    console.log("creating object!")
     this.ws = new WebSocket(ip);
+    //this.ws.class = this;
+    //Binding overrides the default "this" for the websocket callback
+    this._open = this._open.bind(this);
     this.ws.onopen = this._open;
+
+    this._message = this._message.bind(this);
   	this.ws.onmessage = this._message;
+
+    this._close = this._close.bind(this);
     this.ws.onclose = this._close;
 
 
@@ -102,6 +111,7 @@ export class ServerConnection {
                 : SC.serverInTypes.JOIN;
     let packet = new SC.ServerMessage(SC.messageTarget.SERVER,[],JSON.stringify(data));
     this._updateState(connectionStatus.CONNECTED);
+    console.log(this._name);
     this.ws.send(JSON.stringify(packet));
   }
 
@@ -112,14 +122,15 @@ export class ServerConnection {
       /** Handle server messages and broadcast event as needed */
       if (message.source == SC.messageSource.SERVER) {
 
+        let packet = JSON.parse(message.payload);
         /** Switch based on message type */
         switch(message.type) {
           case SC.OutType.CONNECT_AWK:
             this._id = JSON.parse(message.payload).id;
             this._updateState(connectionStatus.READY);
-
           case SC.OutType.ROOM_DATA:
-            let packet = JSON.parse(message.payload);
+            if(this.eventCallback)
+              this.eventCallback(message);
             if(packet.controller) {
               this._controller = packet.controller;
             }
@@ -148,7 +159,7 @@ export class ServerConnection {
 
   private _close(es:CloseEvent) {
     console.log("Palace connection closed");
-    this._updateState(connectionStatus.DISCONNECTED);
+    //this._updateState(connectionStatus.DISCONNECTED);
   }
 
 }

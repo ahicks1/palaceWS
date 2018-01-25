@@ -123,8 +123,8 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
             })(OutType || (OutType = {}));
             exports_1("OutType", OutType);
             ConnInfo = (function () {
-                function ConnInfo(room, name, id) {
-                    this.room = room;
+                function ConnInfo(name, id) {
+                    //this.room = room;
                     this.name = name;
                     this.id = id;
                 }
@@ -171,16 +171,161 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
         }
     };
 });
-System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], function (exports_2, context_2) {
+System.register("protocolCore/ServerConnectionAPI", ["protocolCore/socketCore"], function (exports_2, context_2) {
     "use strict";
     var __moduleName = context_2 && context_2.id;
+    var SC, connectionStatus, ServerConnection;
+    return {
+        setters: [
+            function (SC_1) {
+                SC = SC_1;
+            }
+        ],
+        execute: function () {
+            /** Enum describing the socket connection status */
+            (function (connectionStatus) {
+                connectionStatus[connectionStatus["DISCONNECTED"] = 0] = "DISCONNECTED";
+                connectionStatus[connectionStatus["CONNECTED"] = 1] = "CONNECTED";
+                connectionStatus[connectionStatus["READY"] = 2] = "READY";
+            })(connectionStatus || (connectionStatus = {}));
+            exports_2("connectionStatus", connectionStatus);
+            ServerConnection = (function () {
+                function ServerConnection(type, room, name, ip) {
+                    this._ip = ip;
+                    this._cType = type;
+                    this._name = name;
+                    this._room = room;
+                    this._state = connectionStatus.DISCONNECTED;
+                    this._clients = {};
+                    console.log("creating object!");
+                    this.ws = new WebSocket(ip);
+                    //this.ws.class = this;
+                    //Binding overrides the default "this" for the websocket callback
+                    this._open = this._open.bind(this);
+                    this.ws.onopen = this._open;
+                    this._message = this._message.bind(this);
+                    this.ws.onmessage = this._message;
+                    this._close = this._close.bind(this);
+                    this.ws.onclose = this._close;
+                }
+                ServerConnection.prototype.name = function () {
+                    return this._name;
+                };
+                ServerConnection.prototype.room = function () {
+                    return this._room;
+                };
+                ServerConnection.prototype.id = function () {
+                    return this._id;
+                };
+                ServerConnection.prototype.ip = function () {
+                    return this._ip;
+                };
+                ServerConnection.prototype.controller = function () {
+                    return this._controller;
+                };
+                ServerConnection.prototype.client = function (id) {
+                    //Might return undefined
+                    return this._clients[id];
+                };
+                ServerConnection.prototype.cType = function () {
+                    return this._cType;
+                };
+                ServerConnection.prototype.state = function () {
+                    return this._state;
+                };
+                /* Public functions */
+                ServerConnection.prototype.reconnect = function () {
+                };
+                /* Private functions */
+                ServerConnection.prototype._updateState = function (nstate) {
+                    if (this._state != nstate) {
+                        this._state = nstate;
+                        if (this.stateChangeCallback) {
+                            this.stateChangeCallback(this._state);
+                        }
+                    }
+                };
+                ServerConnection.prototype._open = function () {
+                    var data = {
+                        room: this._room,
+                        name: this._name
+                    };
+                    data.type = (this._cType == SC.connectionType.CONTROLLER)
+                        ? SC.serverInTypes.START
+                        : SC.serverInTypes.JOIN;
+                    var packet = new SC.ServerMessage(SC.messageTarget.SERVER, [], JSON.stringify(data));
+                    this._updateState(connectionStatus.CONNECTED);
+                    console.log(this._name);
+                    this.ws.send(JSON.stringify(packet));
+                };
+                ServerConnection.prototype._message = function (ev) {
+                    var message = SC.parseMessage(ev.data);
+                    if (message) {
+                        /** Handle server messages and broadcast event as needed */
+                        if (message.source == SC.messageSource.SERVER) {
+                            var packet = JSON.parse(message.payload);
+                            /** Switch based on message type */
+                            switch (message.type) {
+                                case SC.OutType.CONNECT_AWK:
+                                    this._id = JSON.parse(message.payload).id;
+                                    this._updateState(connectionStatus.READY);
+                                case SC.OutType.ROOM_DATA:
+                                    if (this.eventCallback)
+                                        this.eventCallback(message);
+                                    if (packet.controller) {
+                                        this._controller = packet.controller;
+                                    }
+                                    for (var i in packet.clients) {
+                                        var client = packet.clients[i];
+                                        this._clients[i] = client;
+                                    }
+                                //TODO: AJH how to notify end user app?
+                                case SC.OutType.NEW_CLIENT:
+                                    //TODO: AJH check to see if client already exists?
+                                    this._clients[packet.id] = new SC.ConnInfo(packet.name, packet.id);
+                            }
+                        }
+                        else {
+                            if (message.type == SC.OutType.DATA) {
+                                if (this.messageCallback) {
+                                    this.messageCallback(message);
+                                }
+                                else {
+                                    console.log("Unhandled message!: " + JSON.stringify(message));
+                                }
+                            }
+                        }
+                    }
+                };
+                ServerConnection.prototype._close = function (es) {
+                    console.log("Palace connection closed");
+                    //this._updateState(connectionStatus.DISCONNECTED);
+                };
+                return ServerConnection;
+            }());
+            exports_2("ServerConnection", ServerConnection);
+        }
+    };
+});
+System.register("clientDemo/clientProtocol", ["protocolCore/socketCore", "protocolCore/ServerConnectionAPI"], function (exports_3, context_3) {
+    "use strict";
+    var __moduleName = context_3 && context_3.id;
     function joinClicked(event) {
         console.log("join pressed");
         var ip = window.location.hostname; //(<HTMLInputElement> document.getElementById('ip_field')).value;
-        //if(ip == "") ip = window.location.hostname;
-        websocket = new WebSocket("ws://" + ip + ":8080"); //NOTE: change this later to be any IP
-        websocket.onopen = yesConnect;
-        websocket.onmessage = messageHandler;
+        var username = document.getElementById('username_field').value;
+        var room = document.getElementById('room_field').value;
+        var isCont = document.getElementById('controller_field').checked
+            ? SC.connectionType.CONTROLLER
+            : SC.connectionType.CLIENT;
+        if (ip == "")
+            ip = window.location.hostname;
+        //websocket = new WebSocket("ws://"+ip+":8080"); //NOTE: change this later to be any IP
+        server = new ServerConnectionAPI_1.ServerConnection(isCont, room, username, "ws://" + ip + ":8080");
+        server.stateChangeCallback = yesConnect;
+        server.messageCallback = messageHandler;
+        server.eventCallback = messageHandler;
+        //websocket.onmessage = messageHandler;
     }
     function messageClicked(event) {
         var targets = [];
@@ -191,30 +336,30 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
         var message = document.getElementById('message_field').value;
         if (targets.lastIndexOf("All") != -1) {
             console.log("broadcasting to all");
-            websocket.send(SC.getPacketAll(message));
+            server.ws.send(SC.getPacketAll(message));
         }
         else if (targets.lastIndexOf("Controller") != -1) {
-            websocket.send(SC.getPacketController(message));
+            server.ws.send(SC.getPacketController(message));
         }
         else {
-            websocket.send(SC.getPacket(message, targets));
+            server.ws.send(SC.getPacket(message, targets));
         }
         //targets.add(new Option("text", "value", false, false));
         //(<any>$('select')).material_select();
     }
-    function yesConnect() {
-        username = document.getElementById('username_field').value;
-        room = document.getElementById('room_field').value;
-        if (document.getElementById('controller_field').checked == true) {
-            console.log("ischecked");
-            websocket.send(SC.getControllerInitPacket(username, room));
-        }
-        else {
-            websocket.send(SC.getClientInitPacket(username, room));
-        }
+    function yesConnect(state) {
+        /*username = (<HTMLInputElement> document.getElementById('username_field')).value;
+        room = (<HTMLInputElement> document.getElementById('room_field')).value;
+      if((<HTMLInputElement> document.getElementById('controller_field')).checked == true) {
+       console.log("ischecked")
+         websocket.send(SC.getControllerInitPacket(username,room));
+     } else {
+       websocket.send(SC.getClientInitPacket(username,room));
+     }*/
+        console.log("New state! " + state);
     }
-    function messageHandler(ev) {
-        var message = SC.parseMessage(ev.data);
+    function messageHandler(msg) {
+        var message = msg; //SC.parseMessage(ev.data);
         if (message != undefined) {
             if (message.source == SC.messageSource.SERVER) {
                 //Message is from the server, usually a client connected or disconnected
@@ -236,13 +381,13 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
                         if (client.id != id)
                             selector.add(new Option(client.name, client.id, false, false));
                     }
-                    $('select').material_select();
+                    jQuery('select').material_select();
                 }
                 else if (message.type == SC.OutType.NEW_CLIENT) {
                     console.log("adding to select");
                     var packet = JSON.parse(message.payload);
                     selector.add(new Option(packet.name, packet.id, false, false));
-                    $('select').material_select();
+                    jQuery('select').material_select();
                 }
             }
             else {
@@ -253,11 +398,14 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
             }
         }
     }
-    var SC, websocket, room, username, id, selector, messageArea;
+    var SC, ServerConnectionAPI_1, websocket, room, username, id, $, server, selector, messageArea;
     return {
         setters: [
-            function (SC_1) {
-                SC = SC_1;
+            function (SC_2) {
+                SC = SC_2;
+            },
+            function (ServerConnectionAPI_1_1) {
+                ServerConnectionAPI_1 = ServerConnectionAPI_1_1;
             }
         ],
         execute: function () {
