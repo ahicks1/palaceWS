@@ -1,0 +1,13 @@
+[
+  {
+    "target":"SERVER",
+    "type":"DATA",
+    "payload":"hello world"
+  },
+  {
+    "target":"TARGETED",
+    "tags":["12345678","ABCDEF12"],
+    "type":"DATA",
+    "payload":"1234"
+  }
+]

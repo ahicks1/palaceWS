@@ -1,0 +1,67 @@
+{
+  "$id": "http://example.com/example.json",
+  "type": "object",
+  "properties": {
+    "target": {
+      "$id": "/properties/target",
+      "type": "string",
+      "title": "Message Target",
+      "examples": [
+        "SERVER"
+      ],
+      "enum": [
+        "SERVER",
+        "CONTROLLER",
+        "TARGETED",
+        "ALL",
+        "CLIENTS"
+      ]
+    },
+    "tags": {
+      "$id": "/properties/tags",
+      "type": "array",
+      "items": {
+        "$id": "/properties/tags/items",
+        "type": "string",
+        "title": "Endpoint ID",
+        "description": "Used as the list of endpoints for TARGETED messages by 8 character hex ID",
+        "default": "",
+        "examples": [
+          "1234ABCD"
+        ],
+        "pattern": "[0-9a-fA-F]{8}"
+      }
+    },
+    "type": {
+      "$id": "/properties/type",
+      "type": "string",
+      "title": "Message type",
+      "default": "DATA",
+      "examples": [
+        "DATA"
+      ],
+      "enum": [
+        "DATA",
+        "START",
+        "JOIN",
+        "GET_CLIENTS",
+        "CONFIGURE"
+      ]
+    },
+    "payload": {
+      "$id": "/properties/payload",
+      "type": "string",
+      "title": "Message Payload",
+      "description": "The payload of the message as stringified json usually passed through to the target",
+      "default": "{}",
+      "examples": [
+        "{\"test\":1234}"
+      ]
+    }
+  },
+  "required": [
+    "target",
+    "payload",
+    "type"
+  ]
+}
