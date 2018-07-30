@@ -3,33 +3,35 @@ const Ajv = require('ajv');
 const fs = require('fs');
 const log = require('./log');
 
+/**
+ * A message recieved from a client
+ * @typedef {Object} InboundMessage
+ * @property {string} target - Message target
+ * @property {string[]} [tags] - List of IDs if target is TARGETED
+ * @property {string} type - The message type, usually DATA
+ * @property {string} payload - Stringified JSON data
+ */
+
 /** An association list between roomIDs and rooms
  * @type {Object<string,Room>}
  */
 var rooms = {};
 
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: 8080, verifyClient: checkConnection });
 const TAG = "Main";
 
 //Start validation constants
 var ajv = new Ajv(); // options can be passed, e.g. {allErrors: true}
 var messageValidator = getValidator("outboundMessage.json");
 
-const targetHandles = {
-  SERVER:handleServerMessage,
-  CONTROLLER:handleOutboundMessage,
-  TARGETED:handleOutboundMessage,
-  ALL:handleOutboundMessage,
-  CLIENTS:handleOutboundMessage
-}
+
 
 /**
  * Creates a new connInfo object to hold metadata for a given ws connection
  * @constructor
  *
- * @param {string=} secret - a 128 digit secret uuid for reconnection
  */
-function ConnInfo(secret) {
+function ConnInfo() {
 
   //TODO AJH handle reconnection by checking for secret
   /** @member {string} - The user-friendly name */
@@ -37,7 +39,7 @@ function ConnInfo(secret) {
   /** @member {string} - An 8 digit hex string id */
   this.id = undefined;
   /** @member {string} - A 128 digit secret uuid for reconnection*/
-  this.secret = secret;
+  this.secret = undefined;
   /** @member {string} - The 4 letter room code*/
   this.room = undefined;
 
@@ -49,13 +51,14 @@ function ConnInfo(secret) {
  */
 wss.on('connection', function connection(ws) {
   log.info(TAG,'New Connection, waiting for init message');
-
+  let meta = new ConnInfo();
   /** Event listener handling incoming messages*/
   ws.on('message', function incoming(raw) {
     log.info(TAG,'received: '+ raw);
     //Try parsing and validating message
+    let message = {};
     try {
-      let message = JSON.parse(raw);
+      message = JSON.parse(raw);
       var valid = messageValidator(message);
       if (!valid) {
 
@@ -70,9 +73,15 @@ wss.on('connection', function connection(ws) {
     }
     //ws.send('[SUCCESS] valid message');
     log.info(TAG,'Valid message!');
+    if(message.target === "SERVER")
+      handleServerMessage(ws, meta, message);
+    else
+      handleOutboundMessage(ws, meta, message);
 
 
   });
+
+
 
   ws.send('something');
 });
@@ -81,27 +90,29 @@ wss.on('connection', function connection(ws) {
  * Handles messages with the SERVER target
  * @param {WebSocket} ws  - Handle to the connection
  * @param {ConnInfo} meta - The meta information for the connection
- * @param {Object} msg - The parsed message object
- * @param {string} msg.target - This will be SERVER
- * @param {string} msg.type - The type of the message
- * @param {string} msg.payload - The stringified payload (structure depends on type)
+ * @param {InboundMessage} msg - The parsed message object
  */
 function handleServerMessage(ws, meta, msg) {
-
+  log.info(TAG,'internal server message!');
 }
 
 /**
  * Handles messages intended to be retransmitted target
  * @param {WebSocket} ws  - Handle to the connection
  * @param {ConnInfo} meta - The meta information for the connection
- * @param {Object} msg - The parsed message object
- * @param {string} msg.target - This the target
- * @param {string[]} [msg.tags] - the 8 digit target IDs
- * @param {string} msg.type - The type of the message
- * @param {string} msg.payload - The stringified payload (structure depends on type)
+ * @param {InboundMessage} msg - The parsed message object
  */
 function handleOutboundMessage(ws, meta, msg) {
+  log.info(TAG, msg.target+' message!');
+  if(!checkValidConnection(meta)) {
+    log.error("MSG","client is not onboarded")
+    return;
+  }
+}
 
+function checkConnection(info) {
+  let {origin,req} = info;
+  return true;
 }
 
 
