@@ -1,5 +1,4 @@
 {
-  "$id": "http://example.com/example.json",
   "type": "object",
   "properties": {
     "target": {
@@ -42,8 +41,6 @@
       ],
       "enum": [
         "DATA",
-        "START",
-        "JOIN",
         "GET_CLIENTS",
         "CONFIGURE"
       ]

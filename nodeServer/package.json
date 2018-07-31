@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "mkdocs": "jsdoc -d \"./docs\" index.js"
+    "mkdocs": "jsdoc -r -d ./docs/out -c ./docs/conf.json"
   },
   "author": "Alexander Hicks",
   "license": "ISC",

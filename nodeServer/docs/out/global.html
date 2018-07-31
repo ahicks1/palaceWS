@@ -98,7 +98,7 @@
 
         
             
-<h4 class="name" id="rooms"><span class="type-signature"></span>rooms<span class="type-signature"> :Object.&lt;string, Room></span></h4>
+<h4 class="name" id="rooms"><span class="type-signature"></span>rooms<span class="type-signature"> :Object.&lt;string, <a href="Room.html">Room</a>></span></h4>
 
 
 
@@ -113,7 +113,7 @@
     <ul>
         <li>
             
-<span class="param-type">Object.&lt;string, Room></span>
+<span class="param-type">Object.&lt;string, <a href="Room.html">Room</a>></span>
 
 
         </li>
@@ -152,7 +152,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line18">line 18</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line69">line 69</a>
     </li></ul></dd>
     
 
@@ -180,7 +180,164 @@
     
 
     
-    <h4 class="name" id="getValidator"><span class="type-signature"></span>getValidator<span class="signature">(filename)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="checkConnection"><span class="type-signature"></span>checkConnection<span class="signature">(info)</span><span class="type-signature"> &rarr; {boolean}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Checks if connection request is valid
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>info</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">The connection info object provided by the Websocket server</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line161">line 161</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    - Whether the server should continue the connection process
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">boolean</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="getValidator"><span class="type-signature"></span>getValidator<span class="signature">(filename)</span><span class="type-signature"> &rarr; {ajv.ValidateFunction}</span></h4>
     
 
     
@@ -281,7 +438,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line115">line 115</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line196">line 196</a>
     </li></ul></dd>
     
 
@@ -304,6 +461,28 @@
 
 
 
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    - Validator from the ajv library
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">ajv.ValidateFunction</span>
+
+
+    </dd>
+</dl>
+
+    
 
 
 
@@ -462,7 +641,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line105">line 105</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line143">line 143</a>
     </li></ul></dd>
     
 
@@ -643,7 +822,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line95">line 95</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line133">line 133</a>
     </li></ul></dd>
     
 
@@ -666,6 +845,163 @@
 
 
 
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="parseQuery"><span class="type-signature"></span>parseQuery<span class="signature">(queryString)</span><span class="type-signature"> &rarr; {Object.&lt;string, string>}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Parses the provided queryString and returns a map of Keys->Values
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>queryString</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">The query to be parsed</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line180">line 180</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    - A map between keys and values
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object.&lt;string, string></span>
+
+
+    </dd>
+</dl>
+
+    
 
 
 
@@ -882,7 +1218,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line6">line 6</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line12">line 12</a>
     </li></ul></dd>
     
 
@@ -912,13 +1248,13 @@
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="ConnInfo.html">ConnInfo</a></li></ul><h3>Global</h3><ul><li><a href="global.html#getValidator">getValidator</a></li><li><a href="global.html#handleOutboundMessage">handleOutboundMessage</a></li><li><a href="global.html#handleServerMessage">handleServerMessage</a></li><li><a href="global.html#rooms">rooms</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-log.html">log</a></li></ul><h3>Classes</h3><ul><li><a href="ConnInfo.html">ConnInfo</a></li><li><a href="Room.html">Room</a></li></ul><h3>Global</h3><ul><li><a href="global.html#checkConnection">checkConnection</a></li><li><a href="global.html#getValidator">getValidator</a></li><li><a href="global.html#handleOutboundMessage">handleOutboundMessage</a></li><li><a href="global.html#handleServerMessage">handleServerMessage</a></li><li><a href="global.html#parseQuery">parseQuery</a></li><li><a href="global.html#rooms">rooms</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Jul 29 2018 18:49:07 GMT-0500 (CDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Mon Jul 30 2018 20:54:29 GMT-0500 (CDT)
 </footer>
 
 <script> prettyPrint(); </script>
