@@ -18,6 +18,17 @@ const crypto = require("crypto");
  * @property {string} payload - Stringified JSON data
  */
 
+ /** A class holding all the options for a room
+  * @constructor
+  */
+ function RoomOptions() {
+    this.broadcastConnections = false;
+    this.allowReconnecting = true;
+    this.privateRoom = false;
+    this.roomSize = 100;
+    this.allowClientToClient = true;
+ }
+
 /**
  * A class holding a room's information
  * @constructor
@@ -33,13 +44,52 @@ function Room(name,controller,clients) {
   this.controller = controller;
   /** @member {Object<string,ConnInfo>} - An association list between Id's and connections */
   this.clients = clients;
+  /** @member {RoomOptions} */
+  this.options = new RoomOptions();
 
+}
+
+/**
+ * @param {ConnInfo} conn - the connection info to add to the room
+ */
+Room.prototype.addClient = function(conn) {
+  this.clients[conn.id] = conn;
+  let payload = {'name':conn.name,'id':conn.id};
+  let message = getOutboundMessage('SERVER','CLIENT_ADDED',JSON.stringify(payload));
+  let targets = [conn.id];
+  if(this.options.broadcastConnections) targets = Object.keys(this.clients);
+  targets.push(this.controller.id);
+  this.broadcastMessage(targets,message);
+  //TODO: AJH - Broadcast client add event to all interested parties
+}
+
+/**
+ * @param {ConnInfo} conn - the connection info to add to the room
+ */
+Room.prototype.removeClient = function(conn) {
+  delete this.clients[conn.id];
+  //TODO: AJH - Broadcast client remove event to all interested parties
+}
+
+/**
+ * @param {string[]} targets
+ * @param {string} message
+ */
+Room.prototype.broadcastMessage = function(targets,message) {
+  targets.forEach(t => {
+    if(this.clients[t])
+      this.clients[t].conn.send(message);
+    else if(this.controller.id === t) 
+      this.controller.conn.send(message);
+    else
+      log.warn(TAG, `ID: ${t} not found`);
+  })
 }
 
 /**
  * Creates a new connInfo object to hold metadata for a given ws connection
  * @constructor
- *
+ * 
  */
 function ConnInfo(conn,name,room,id,secret) {
 
@@ -57,6 +107,8 @@ function ConnInfo(conn,name,room,id,secret) {
 
 
 }
+
+
 
 /*==========================================================================
  *
@@ -92,16 +144,56 @@ var outboundMessageTypeTree = {
  *
  *=========================================================================*/
 
+/**
+ * Adds the client the room or sets up a new room
+ * @param {WebSocket} ws 
+ * @param {IncomingMessage} req 
+ * 
+ * @returns {ConnInfo} - The information about the connection
+ */
+function handleSetup(ws,req) {
+  log.info(TAG,'New Connection!');
+
+  //Parse params (We already know it's valid)
+  let qstr = req.url.split('?');
+  let params = parseQuery(qstr[1]);
+  let isController = qstr[0].startsWith("/start");
+
+  if(isController) {
+    let meta = new ConnInfo(ws, qstr.name);
+    rooms[meta.room] = new Room(`Room${Object.keys(rooms).length}`,meta,{});
+    log.info(TAG, `Created new room: ${meta.room}`)
+    return meta;
+
+  } else {
+    console.log(params.room);
+    let meta = new ConnInfo(ws, params.name, params.room);
+    let {id,secret} = params;
+    if(id && secret) {
+      if(rooms[meta.room] && 
+         rooms[meta.room].clients[id] &&
+         rooms[meta.room].clients[id].secret === secret) {
+            meta.id = id;
+            meta.secret = secret;
+         } else {
+           log.error(TAG, "Tried reconnect with invalid parameters");
+           abortConnection();
+         }
+    } else {
+      console.log(meta.room);
+      //TODO: AJH - Add more checks, this is kinda brittle
+      rooms[meta.room].addClient(meta);
+    }
+    return meta;
+  }
+  
+}
+
 /*
  * Called whenever a new connection is recieved
  */
 wss.on('connection', function connection(ws,req) {
-  log.info(TAG,'New Connection, waiting for init message');
-  let qstr = req.url.split('?');;
-  let params = parseQuery(qstr[1]);
-  let isController = qstr[0].startsWith("/controller/");
-  let roomID = qstr.room;
-  let meta = new ConnInfo(ws,qstr.name, roomID);
+  meta = handleSetup(ws,req);
   /** Event listener handling incoming messages*/
   ws.on('message', function incoming(raw) {
     log.info(TAG,'received: '+ raw);
@@ -111,12 +203,11 @@ wss.on('connection', function connection(ws,req) {
       message = JSON.parse(raw);
       var valid = messageValidator(message);
       if (!valid) {
-
         log.error(TAG,JSON.stringify(messageValidator.errors));
         throw "Invalid message"
       }
     } catch (e) {
-      log.error(TAG,"Invalid JSON")
+      log.error(TAG,`Invalid JSON: ${e}`);
       ws.send('[ERROR] invalid message');
       ws.close();
       return;
@@ -143,6 +234,8 @@ function handleServerMessage(ws, meta, msg) {
   log.info(TAG,'internal server message!');
 }
 
+
+
 /**
  * Handles messages intended to be retransmitted target
  * @param {WebSocket} ws  - Handle to the connection
@@ -150,6 +243,12 @@ function handleServerMessage(ws, meta, msg) {
  * @param {InboundMessage} msg - The parsed message object
  */
 function handleOutboundMessage(ws, meta, msg) {
+  let targets = getTargets(meta,msg);
+  let message = getOutboundMessage('CLIENT','DATA',msg.payload);
+  rooms[meta.room].broadcastMessage(targets, message);
+
+  //TODO: Make sure you're allowed to send the message you're trying to send
+  
   log.info(TAG, msg.target+' message!');
 }
 
@@ -160,6 +259,36 @@ function handleOutboundMessage(ws, meta, msg) {
  * Support functions
  *
  *=========================================================================*/
+
+
+ /**
+ * 
+ * @param {ConnInfo} meta 
+ * @param {InboundMessage} msg 
+ * 
+ * @returns {string[]}
+ */
+function getTargets(meta, msg) {
+  let lst = [];
+  switch(msg.target) {
+    case 'CONTROLLER':
+      return [rooms[meta.room].controller.id];
+    case 'TARGETED':
+      lst = msg.tags;
+      if(!lst) throw ('No targets specified');
+      lst = lst.filter((id) => rooms[meta.room].clients[id] || rooms[meta.room].controller.id === id)
+      return lst;
+    case 'ALL':
+      lst = Object.keys(rooms[meta.room].clients);
+      lst.push(rooms[meta.room].controller.id);
+      return lst;
+    case 'CLIENTS':
+      lst = Object.keys(rooms[meta.room].clients);
+      return lst;
+    default:
+      throw new Error("Invalid target");
+  }
+}
 
 /**
  * Checks if connection request is valid
@@ -173,9 +302,9 @@ function checkConnection(info) {
   let params = parseQuery(qstr[1]);
   let isQuery = params.name != undefined;
   if(!isQuery) log.error("CONN","no name in queryString");
-  let isController = qstr[0].startsWith("/controller");
+  let isController = qstr[0].startsWith("/start");
   let roomExists = params.room != undefined && rooms[params.room] != undefined;
-  let isUrl = isController || (qstr[0].startsWith("/client") && roomExists);
+  let isUrl = isController || (qstr[0].startsWith("/join") && roomExists);
   if(!isUrl) log.error("CONN","wrong endpoint");
   return isQuery && isUrl;
 }
@@ -223,4 +352,13 @@ function getValidator(filename) {
   let obj = JSON.parse(text);
   let validator = ajv.compile(obj);
   return validator;
+}
+
+/**
+ * 
+ * @param {WebSocket} ws 
+ */
+function abortConnection(ws) {
+  ws.send('[ERROR] invalid message');
+  ws.close();
 }
