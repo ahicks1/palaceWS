@@ -1,5 +1,6 @@
 System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
     "use strict";
+    var connectionType, messageTarget, messageSource, serverInTypes, OutType, ConnInfo, RoomData, ServerMessage, ClientMessage;
     var __moduleName = context_1 && context_1.id;
     /**
      * Parses a message from string(returns undefined if unable to parse)
@@ -81,7 +82,6 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
         return JSON.stringify(ret);
     }
     exports_1("getPacketController", getPacketController);
-    var connectionType, messageTarget, messageSource, serverInTypes, OutType, ConnInfo, RoomData, ServerMessage, ClientMessage;
     return {
         setters: [],
         execute: function () {
@@ -122,23 +122,23 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
                 OutType[OutType["CONFIGURATION"] = 5] = "CONFIGURATION"; //Room configuration object TODO
             })(OutType || (OutType = {}));
             exports_1("OutType", OutType);
-            ConnInfo = (function () {
-                function ConnInfo(room, name, id) {
-                    this.room = room;
+            ConnInfo = /** @class */ (function () {
+                function ConnInfo(name, id) {
+                    //this.room = room;
                     this.name = name;
                     this.id = id;
                 }
                 return ConnInfo;
             }());
             exports_1("ConnInfo", ConnInfo);
-            RoomData = (function () {
+            RoomData = /** @class */ (function () {
                 function RoomData() {
                 }
                 return RoomData;
             }());
             exports_1("RoomData", RoomData);
             /** Class representing an outbound message */
-            ServerMessage = (function () {
+            ServerMessage = /** @class */ (function () {
                 /**
                  * Create a new ServerMessage
                  * @param target - a messageTarget representing the destination
@@ -154,7 +154,7 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
             }());
             exports_1("ServerMessage", ServerMessage);
             /** Class representing an inbound message */
-            ClientMessage = (function () {
+            ClientMessage = /** @class */ (function () {
                 /**
                  * Create a new ClientMessage
                  * @param source - a messageSource representing the source
@@ -173,6 +173,7 @@ System.register("protocolCore/socketCore", [], function (exports_1, context_1) {
 });
 System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], function (exports_2, context_2) {
     "use strict";
+    var SC, websocket, room, username, id, $, selector, messageArea;
     var __moduleName = context_2 && context_2.id;
     function joinClicked(event) {
         console.log("join pressed");
@@ -253,7 +254,6 @@ System.register("clientDemo/clientProtocol", ["protocolCore/socketCore"], functi
             }
         }
     }
-    var SC, websocket, room, username, id, selector, messageArea;
     return {
         setters: [
             function (SC_1) {

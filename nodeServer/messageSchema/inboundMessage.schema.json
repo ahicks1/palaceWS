@@ -41,7 +41,7 @@
       ],
       "enum": [
         "DATA",
-        "GET_CLIENTS",
+        "GET_ROOM",
         "CONFIGURE"
       ]
     },

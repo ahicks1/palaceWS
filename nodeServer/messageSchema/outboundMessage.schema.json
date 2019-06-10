@@ -40,7 +40,7 @@
         "enum": [
           "DATA",
           "CLIENT_ADDED",
-          "CLIENT_DISCONNECTED",
+          "CLIENT_REMOVED",
           "CONFIGURATION",
           "SERVER_INFORMATION"
         ]

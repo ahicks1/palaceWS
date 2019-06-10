@@ -1,0 +1,40 @@
+{
+    "type":"object",
+    "properties": {
+        "broadcastConnections":{
+            "$id":"/properties/broadcastConnection",
+            "type":"boolean",
+            "title": "Broadcast Connections Option",
+            "description": "Whether a message should be sent to all clients when a new client connects or disconnects",
+            "default":false
+        },
+        "allowReconnecting":{
+            "$id":"/properties/allowReconnecting",
+            "type":"boolean",
+            "title": "Allow Reconnecting Option",
+            "description": "Whether a client can reconnect using the secret",
+            "default":false
+        },
+        "privateRoom":{
+            "$id":"/properties/privateRoom",
+            "type":"boolean",
+            "title": "Private Room Option",
+            "description": "Whether a room has a user provided password that must be proivided by a client when connecting",
+            "default":false
+        },
+        "roomSize":{
+            "$id":"/properties/roomSize",
+            "type":"number",
+            "title": "Max Room Size Option",
+            "description": "How many clients should the room allow",
+            "default":false
+        },
+        "allowClientToClient":{
+            "$id":"/properties/allowClientToClient",
+            "type":"boolean",
+            "title": "Allow Client to Client Option",
+            "description": "Whether a room allows clients to send messages directly to other clients",
+            "default":true
+        }
+    }
+}

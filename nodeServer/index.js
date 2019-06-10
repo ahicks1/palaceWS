@@ -1,8 +1,10 @@
+const {Room, ConnInfo, getOutboundMessage} =  require('./room');
+
 const WebSocket = require('ws');
 const Ajv = require('ajv');
 const fs = require('fs');
 const log = require('./log');
-const crypto = require("crypto");
+
 
 /*==========================================================================
  *
@@ -18,95 +20,7 @@ const crypto = require("crypto");
  * @property {string} payload - Stringified JSON data
  */
 
- /** A class holding all the options for a room
-  * @constructor
-  */
- function RoomOptions() {
-    this.broadcastConnections = false;
-    this.allowReconnecting = true;
-    this.privateRoom = false;
-    this.roomSize = 100;
-    this.allowClientToClient = true;
- }
-
-/**
- * A class holding a room's information
- * @constructor
- *
- * @param {string} name - The friendly name of the room
- * @param {ConnInfo} controller - The creating connection or the "controller"
- * @param {Object<string,ConnInfo>} clients - An association list between Id's and connections
- */
-function Room(name,controller,clients) {
-  /** @member {string} - The friendly name of the room */
-  this.name = name;
-  /** @member {ConnInfo} - The central "room admin" */
-  this.controller = controller;
-  /** @member {Object<string,ConnInfo>} - An association list between Id's and connections */
-  this.clients = clients;
-  /** @member {RoomOptions} */
-  this.options = new RoomOptions();
-
-}
-
-/**
- * @param {ConnInfo} conn - the connection info to add to the room
- */
-Room.prototype.addClient = function(conn) {
-  this.clients[conn.id] = conn;
-  let payload = {'name':conn.name,'id':conn.id};
-  let message = getOutboundMessage('SERVER','CLIENT_ADDED',JSON.stringify(payload));
-  let targets = [conn.id];
-  if(this.options.broadcastConnections) targets = Object.keys(this.clients);
-  targets.push(this.controller.id);
-  this.broadcastMessage(targets,message);
-  //TODO: AJH - Broadcast client add event to all interested parties
-}
-
-/**
- * @param {ConnInfo} conn - the connection info to add to the room
- */
-Room.prototype.removeClient = function(conn) {
-  delete this.clients[conn.id];
-  //TODO: AJH - Broadcast client remove event to all interested parties
-}
-
-/**
- * @param {string[]} targets
- * @param {string} message
- */
-Room.prototype.broadcastMessage = function(targets,message) {
-  targets.forEach(t => {
-    if(this.clients[t])
-      this.clients[t].conn.send(message);
-    else if(this.controller.id === t) 
-      this.controller.conn.send(message);
-    else
-      log.warn(TAG, `ID: ${t} not found`);
-  })
-}
-
-/**
- * Creates a new connInfo object to hold metadata for a given ws connection
- * @constructor
- * 
- */
-function ConnInfo(conn,name,room,id,secret) {
-
-  //TODO AJH handle reconnection by checking for secret
-  /** @member {WebSocket} - the WebSocket connection */
-  this.conn = conn;
-  /** @member {string} - The user-friendly name */
-  this.name = name;
-  /** @member {string} - An 8 digit hex string id */
-  this.id = id || crypto.randomBytes(4).toString('hex');
-  /** @member {string} - A 64 digit secret uuid for reconnection*/
-  this.secret = secret || crypto.randomBytes(32).toString('base64');
-  /** @member {string} - The 4 letter room code*/
-  this.room = room || crypto.randomBytes(2).toString('hex');
-
-
-}
+ 
 
 
 
@@ -125,7 +39,8 @@ const TAG = "MAIN";
 
 //Start validation constants
 var ajv = new Ajv(); // options can be passed, e.g. {allErrors: true}
-var messageValidator = getValidator("inboundMessage.json");
+var messageValidator = getValidator("inboundMessage.schema.json");
+var configurationValidator = getValidator("roomConfiguration.schema.json");
 
 // This is for long term extensibility, overkill right now
 var serverMessageTypeTree = {
@@ -161,7 +76,7 @@ function handleSetup(ws,req) {
 
   if(isController) {
     let meta = new ConnInfo(ws, qstr.name);
-    rooms[meta.room] = new Room(`Room${Object.keys(rooms).length}`,meta,{});
+    rooms[meta.room] = new Room(`Room${Object.keys(rooms).length}`,meta.room, meta,{});
     log.info(TAG, `Created new room: ${meta.room}`)
     return meta;
 
@@ -193,15 +108,15 @@ function handleSetup(ws,req) {
  * Called whenever a new connection is recieved
  */
 wss.on('connection', function connection(ws,req) {
-  meta = handleSetup(ws,req);
+  let meta = handleSetup(ws,req);
   /** Event listener handling incoming messages*/
-  ws.on('message', function incoming(raw) {
+  ws.on('message', (raw) => {
     log.info(TAG,'received: '+ raw);
     //Try parsing and validating message
     let message = {};
     try {
       message = JSON.parse(raw);
-      var valid = messageValidator(message);
+      let valid = messageValidator(message);
       if (!valid) {
         log.error(TAG,JSON.stringify(messageValidator.errors));
         throw "Invalid message"
@@ -222,6 +137,15 @@ wss.on('connection', function connection(ws,req) {
 
   });
 
+  ws.on( 'close', (ws,code,reason) => {
+    if(rooms[meta.room].controller.id === meta.id) {
+      //Destroy room
+    } else {
+      //Delete connection
+      rooms[meta.room].removeClient(meta);
+    }
+  });
+
 });
 
 /**
@@ -232,6 +156,31 @@ wss.on('connection', function connection(ws,req) {
  */
 function handleServerMessage(ws, meta, msg) {
   log.info(TAG,'internal server message!');
+  let out = "";
+  let targets = [];
+  switch(msg.type) {
+    case 'GET_ROOM':
+    //TODO: AJH - should I make sure the client has permission to ask for this? 
+    // Nah, screw security
+      out = rooms[meta.room].getRoomPayload(meta, msg);
+      targets = [meta.id];
+      rooms[meta.room].broadcastMessage(targets,out);
+      break;
+    case 'CONFIGURE':
+      try {
+        let config = JSON.parse(msg.payload);
+        let valid = configurationValidator(config);
+        if(!valid) throw "Invalid JSON"
+        Object.assign(rooms[meta.room].options,config);
+      } catch (e) {
+        log.error(TAG,e)
+        return;
+      }
+      out = rooms[meta.room].getRoomPayload(meta, msg);
+      targets = [meta.id];
+      rooms[meta.room].broadcastMessage(targets,out);
+      break;
+  }
 }
 
 
@@ -325,21 +274,6 @@ function parseQuery(queryString) {
     return query;
 }
 
-/**
- * A gets a message for transmitting to a client
- * @param {string} source - The source of the message
- * @param {string} type - The type of the message
- * @param {string} payload - The stringified payload
- *
- * @returns {string} - the outbound message stringified
- */
- function getOutboundMessage(source,type,payload) {
-   return JSON.stringify({
-     source:source,
-     type:type,
-     payload:payload
-   });
- }
 
 /**
  * Get the json validator for a given json schema file
