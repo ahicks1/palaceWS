@@ -154,7 +154,8 @@ function handleServerMessage(ws, meta, msg) {
     case 'GET_ROOM':
     //TODO: AJH - should I make sure the client has permission to ask for this? 
     // Nah, screw security
-      let sendConns = rooms[meta.room].options.broadcastConnections || meta.id === rooms[meta.room].controller.id;
+      let sendConns = rooms[meta.room].options.broadcastConnections || 
+                      meta.id === rooms[meta.room].controller.id;
       out = rooms[meta.room].getRoomPayload(sendConns);
       targets = [meta.id];
       rooms[meta.room].broadcastMessage(targets,out);
