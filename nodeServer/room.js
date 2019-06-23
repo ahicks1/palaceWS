@@ -52,6 +52,9 @@ function Room(name,id,controller,clients) {
   this.id = id;
   /** @member {RoomOptions} options */
   this.options = new RoomOptions();
+  
+  let out = this.getRoomPayload();
+  this.broadcastMessage([controller.id],out);
 
 }
 
@@ -80,12 +83,12 @@ Room.prototype.removeClient = function(conn) {
 this.clients[conn.id] = conn;
   let payload = {'name':conn.name,'id':conn.id};
   let message = getOutboundMessage('SERVER','CLIENT_REMOVED',JSON.stringify(payload));
-  let targets = [conn.id];
+  let targets = [];
+  delete this.clients[conn.id];
+
   if(this.options.broadcastConnections) targets = Object.keys(this.clients);
   targets.push(this.controller.id);
   this.broadcastMessage(targets,message);
-
-  delete this.clients[conn.id];
   //TODO: AJH - Broadcast client remove event to all interested parties
 }
 
@@ -105,19 +108,23 @@ Room.prototype.broadcastMessage = function(targets,message) {
 }
 
 /**
- * @param {ConnInfo} meta
- * @param {InboundMessage} msg
+ * @param {Boolean} withClients
  * 
  * @returns {string}
  */
-Room.prototype.getRoomPayload = function(meta,msg) {
+Room.prototype.getRoomPayload = function(withClients) {
 
-  let ret = {
-    clients:Object.keys(this.clients).map(id => {return {id:id,name:this.clients[id].name}}),
+  let payload = {
     controller:{id:this.controller.id,name:this.controller.name},
-    id:this.room,
+    id:this.id,
     options:Object.assign({},this.options)
   };
+  if(withClients) payload.clients = Object.keys(this.clients).map(id => {return {id:id,name:this.clients[id].name}})
+  let ret = {
+    source:"SERVER",
+    type:"SERVER_INFORMATION",
+    payload:JSON.stringify(payload)
+  }
   return JSON.stringify(ret);
 
 }

@@ -42,16 +42,6 @@ var ajv = new Ajv(); // options can be passed, e.g. {allErrors: true}
 var messageValidator = getValidator("inboundMessage.schema.json");
 var configurationValidator = getValidator("roomConfiguration.schema.json");
 
-// This is for long term extensibility, overkill right now
-var serverMessageTypeTree = {
-  "GET_CLIENTS":() => {},
-  "CONFIGURE":() => {}
-};
-
-// This is for long term extensibility, overkill right now
-var outboundMessageTypeTree = {
-  "DATA":() => {}
-};
 
 /*==========================================================================
  *
@@ -98,7 +88,9 @@ function handleSetup(ws,req) {
       console.log(meta.room);
       //TODO: AJH - Add more checks, this is kinda brittle
       rooms[meta.room].addClient(meta);
+      
     }
+
     return meta;
   }
   
@@ -162,7 +154,8 @@ function handleServerMessage(ws, meta, msg) {
     case 'GET_ROOM':
     //TODO: AJH - should I make sure the client has permission to ask for this? 
     // Nah, screw security
-      out = rooms[meta.room].getRoomPayload(meta, msg);
+      let sendConns = rooms[meta.room].options.broadcastConnections || meta.id === rooms[meta.room].controller.id;
+      out = rooms[meta.room].getRoomPayload(sendConns);
       targets = [meta.id];
       rooms[meta.room].broadcastMessage(targets,out);
       break;
@@ -170,7 +163,7 @@ function handleServerMessage(ws, meta, msg) {
       try {
         let config = JSON.parse(msg.payload);
         let valid = configurationValidator(config);
-        if(!valid) throw "Invalid JSON"
+        if(!valid) throw new Error("Invalid JSON");
         Object.assign(rooms[meta.room].options,config);
       } catch (e) {
         log.error(TAG,e)
